@@ -8,8 +8,9 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Section tarjan.
-Variable (V : finType) (g : V -> seq V).
-Notation gconnect := (connect (grel g)).
+Variable (V : finType) (successors : V -> seq V).
+Notation edge := (grel successors).
+Notation gconnect := (connect edge).
 Notation infty := #|V|.
 
 Definition split_after (T :eqType) (x : T) (s : seq T) :=
@@ -41,7 +42,7 @@ Definition add_sccs x e := let (s2, s3) := split_after x (stack e) in
 
 Definition dfs1 (dfs' : {set V} -> env -> nat * env) (x : V) e :=
     let m := rank x (x :: stack e) in
-    let: (m1, e1) := dfs' [set y in g x] (add_stack x e) in
+    let: (m1, e1) := dfs' [set y in successors x] (add_stack x e) in
     if m1 >= m then (infty, add_sccs x e1) else (m1, add_blacks x e1).
 
 Definition dfs' dfs1 dfs' (roots : {set V}) e :=
@@ -59,7 +60,6 @@ Fixpoint tarjan n : {set V} -> env -> nat * env :=
 
 Definition gsccs := [set [set y in V | gconnect x y && gconnect y x] | x in V].
 
-Definition noblack_to_white e := [forall x in blacks e, [disjoint g x & whites e]].
 
 Definition wf_env e := 
   [/\ [set x in stack e] = grays e :|: (blacks e :\: \bigcup_(scc in sccs e) scc),
@@ -119,6 +119,9 @@ Qed.
 Lemma drop_subseq (T : eqType) n (s : seq T) : subseq (drop n s) s.
 Proof. by rewrite -[X in subseq _ X](cat_take_drop n) suffix_subseq. Qed.
 
+(* Lemma uniq_catP x s1 s2 : x \in s1 ++ s2 -> uniq (s1 ++ s2) -> *)
+(*   (x \in s1) = (x \notin s2). *)
+
 Lemma add_sccs_wf x e : 
   take (index x (stack e)) (stack e) \subset blacks e ->
   x \in grays e -> wf_env e -> wf_env (add_sccs x e).
@@ -147,16 +150,11 @@ move=> s1 s2 s_uniq; rewrite mem_cat => /orP[y_s1x|y_s2].
   by move=> /negPf->; rewrite y_s2.
 Qed.
 
+Definition noblack_to_white e :=
+  forall x, x \in blacks e -> [disjoint successors x & whites e].
 
-
-Definition wf_color e :=
-  [/\ [set x in stack e] = grays e :|: (blacks e :\: \bigcup_(scc in sccs e) scc),
-   \bigcup_(scc in sccs e) scc \subset blacks e &
-   noblack_to_white e].
-
-Definition wf_stack e :=
-  [/\ wf_color e,
-      uniq (stack e),
+Definition wf_graph e := 
+  [/\ noblack_to_white e,
       forall x, x \in grays e -> forall y, y \in stack e ->
           (rank x (stack e) <= rank y (stack e)) -> gconnect x y &
       forall y, y \in stack e -> exists2 x, x \in grays e &
@@ -164,19 +162,33 @@ Definition wf_stack e :=
   ].
 
 
+(* Lemma  *)
+
+
+
+(* Definition wf_stack e := *)
+(*   [/\ wf_color e, *)
+(*       uniq (stack e), *)
+(*       forall x, x \in grays e -> forall y, y \in stack e -> *)
+(*           (rank x (stack e) <= rank y (stack e)) -> gconnect x y & *)
+(*       forall y, y \in stack e -> exists2 x, x \in grays e & *)
+(*           (rank x (stack e) <= rank y (stack e)) && gconnect y x *)
+(*   ]. *)
+
+
 
 Definition black_gsccs e := [set scc in gsccs | scc \subset blacks e].
 
 Definition xedges (new old : seq V) :=
-  [set y in old | [exists x in new, (x \notin old) && grel g x y]].
+  [set y in old | [exists x in new, (x \notin old) && edge x y]].
 
 Definition dfs_correct (roots : {set V}) (e e' : env) (m : nat) :=
   [/\ (forall x, x \in roots -> forall y, y \in grays e -> gconnect y x),
-    wf_stack e & sccs e == black_gsccs e]
+    wf_env e, wf_graph e & sccs e == black_gsccs e]
 
   ->
 
-  [/\ (wf_stack e' /\ (sccs e' == black_gsccs e')),
+  [/\ [/\ wf_env e', wf_graph e & (sccs e' == black_gsccs e')],
 
    [/\ exists x, let: (new, old) := split_after x (stack e) in
           (old == stack e) /\ (new \subset blacks e),
@@ -199,7 +211,7 @@ Definition dfs'_correct (dfs' : {set V} -> env -> nat * env) roots e :=
   let (m, e') := dfs' roots e in dfs_correct roots e e' m.
 
 Lemma dfs1_is_correct (dfs' : {set V} -> env -> nat * env) (x : V) e :
-  (dfs'_correct dfs' [set y in g x] (add_stack x e)) ->
+  (dfs'_correct dfs' [set y in successors x] (add_stack x e)) ->
   dfs1_correct (dfs1 dfs') x e.
 Proof.
 rewrite /dfs1_correct /dfs1 /=.
@@ -209,15 +221,7 @@ case: leqP => [rank_small|rank_big] /=; case: e' => b' s' sccs' in dfs_is_correc
   move=> x_white []; split.
   - split.
     + split.
-      * split => /=.
-        rewrite /grays /=.
-        
-   
-  
-move=> 
-
-
-
+      * 
 Admitted.
   
 Lemma dfs'_is_correct dfs1 subdfs' (roots : {set V}) e :
