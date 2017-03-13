@@ -55,6 +55,11 @@ Lemma rank_cons x y s : rank x (y :: s) =
   if (x == y) && (x \notin s) then size s else rank x s.
 Proof. by []. Qed.
 
+Lemma rank_cat x s s' : x \in s' -> rank x (s ++ s') = rank x s'.
+Proof.
+by move=> x_s; rewrite !rankE rev_cat mem_cat x_s orbT index_cat mem_rev x_s.
+Qed.
+
 Arguments rank : simpl never.
 
 Record env := Env {blacks : {set V}; stack : seq V; sccs : {set {set V}}}.
@@ -78,7 +83,7 @@ Definition dfs' dfs1 dfs' (roots : {set V}) e :=
          if x \in stack e then (rank x (stack e), e)
          else if x \in blacks e then (infty, e)
          else dfs1 x e in
-       let: (m2, e2) := dfs' roots' e1 in (min m1 m2, e2).
+       let: (m2, e2) := dfs' roots' e1 in (minn m1 m2, e2).
 
 Fixpoint tarjan n : {set V} -> env -> nat * env :=
   if n is n.+1 then dfs' (dfs1 (tarjan n)) (tarjan n)
@@ -120,6 +125,9 @@ Proof. by rewrite !inE; case: (x \in blacks _). Qed.
 Lemma whites_stackF x e : x \in whites e -> x \in stack e = false.
 Proof. by rewrite !inE andbC; case: (x \in stack _); rewrite //= orNb. Qed.
 
+Lemma whites_graysF x e : x \in whites e -> x \in grays e = false.
+Proof. by rewrite !inE andbC; case: (x \in stack _); rewrite //= orNb. Qed.
+
 Lemma grays_stack x e : x \in grays e -> x \in stack e.
 Proof. by rewrite !inE andbC; case: (x \in stack _). Qed.
 
@@ -141,6 +149,10 @@ move=> x_gray [s_def sccs_blacks s_uniq]; split => //=; last first.
 apply/setP=> y; rewrite !inE.
 by have [->|] := altP (y =P x); case: colorP=> //=; case: colorP x_gray.
 Qed.
+
+Lemma wf_stack_uniq e : wf_env e -> uniq (stack e).
+Proof. by case. Qed.
+Hint Resolve wf_stack_uniq.
 
 Lemma add_sccs_wf x e :
   take (index x (stack e)) (stack e) \subset blacks e ->
@@ -168,13 +180,12 @@ Qed.
 Definition noblack_to_white e :=
   forall x, x \in blacks e -> [disjoint successors x & whites e].
 
-Definition wf_graph (roots : {set V}) e :=
+Definition wf_graph e :=
   [/\ noblack_to_white e,
-   forall x, x \in roots -> forall y, y \in grays e -> gconnect y x,
    forall x, x \in grays e -> forall y, y \in stack e ->
      (rank x (stack e) <= rank y (stack e)) -> gconnect x y &
-   forall y, y \in stack e -> exists2 x, x \in grays e &
-     (rank x (stack e) <= rank y (stack e)) /\ gconnect y x
+   forall y, y \in stack e -> exists x, [/\ x \in grays e,
+     (rank x (stack e) <= rank y (stack e)) & gconnect y x]
   ].
 
 Lemma whites_add_stack x e : whites (add_stack x e) = whites e :\ x.
@@ -208,28 +219,195 @@ apply: negbTE; rewrite -ltnNge ltnS cardE uniq_leq_size //.
 by move=> y; rewrite mem_enum.
 Qed.
 
-Lemma add_stack_gwf roots e w : uniq (stack e) -> w \in whites e ->
-  wf_graph roots e -> wf_graph roots (add_stack w e).
+Definition access_to e (roots : {set V}) := 
+  (forall x, x \in grays e -> 
+   forall y, y \in roots -> gconnect x y).
+
+Definition black_gsccs e := [set scc in gsccs | scc \subset blacks e].
+
+Definition pre_dfs (roots : {set V}) (e : env) :=
+  [/\ access_to e roots, wf_env e, wf_graph e & sccs e = black_gsccs e].
+
+Lemma add_stack_gwf e w : 
+  access_to e [set w] -> wf_env e -> w \in whites e -> wf_graph e -> 
+  wf_graph (add_stack w e).
 Proof.
-move=> s_uniq w_white [Nbw rg gs sg]; split.
+move=> grays_to e_wf w_white [Nbw gs sg]; split.
 - move=> y /Nbw; rewrite whites_add_stack.
   rewrite ![[disjoint successors _ & _]]disjoint_sym.
   by apply/disjoint_trans/subsetDl.
-- admit.
-- rewrite grays_add_stack //=.
-  move=> x; rewrite rank_cons !inE.
+- rewrite grays_add_stack //= => x; rewrite rank_cons !inE.
   move=> /orP[/eqP->|/andP[xNb xs]] y; rewrite in_cons=> /orP[/eqP->|/=ys];
   rewrite ?rank_cons ?eqxx ?(@whites_stackF w) ?xs ?ys ?(andbF, andbT) //=.
-  + by rewrite leqNgt rank_small // ys.
-  + move=> _.
-  + admit.
+  + by rewrite leqNgt rank_small ?wf_stack_uniq // ys.
+  + by move=> _; rewrite grays_to ?inE //= xNb.
   + by apply: gs; rewrite ?inE ?xNb.
-  (* - rewrite leqNgt rank_small //. xs.    apply: gs=> //=. *)
-  (*   move=> /orP[/eqP->|ys]. *)
-  (*     rewrite eqxx /=. *)
-(* move=> y yg z zs ryz. *)
-(*   rewrite -[in X in X -> _](setD1K x_white). *)
-Abort.
+- move=> y; rewrite inE => /predU1P [->|].
+    exists w; rewrite ?grays_add_stack ?inE ?eqxx //.
+    by rewrite whites_blacksF ?whites_stackF.
+  move=> y_stack; have /sg [x [x_gray le_xy y_to_x]] := y_stack.
+  exists x; split=> //.
+    by rewrite grays_add_stack // inE x_gray orbT.
+  rewrite stack_add_stack !rank_cons [x == w]negbTE /= 1?[y == w]negbTE //=.
+    by apply: contraTneq y_stack => ->; rewrite whites_stackF.
+  by apply: contraTneq x_gray => ->; rewrite whites_graysF.
+Qed.
+
+Lemma add_stack_pre e w :
+  access_to e [set w] -> wf_env e -> w \in whites e -> wf_graph e -> 
+  access_to (add_stack w e) [set x in successors w].
+Proof.
+move=> grays_to e_wf w_white e_gwf.
+move=> x; rewrite grays_add_stack // 2?inE => /predU1P [->|].
+  by move=> y; rewrite inE => y_succ_w; rewrite connect1.
+move=> /grays_to x_to_y y; rewrite inE => y_succ_w.
+by rewrite (connect_trans _ (connect1 y_succ_w)) // x_to_y ?inE.
+Qed.
+
+Definition xedges (new old : seq V) :=
+  [set y in old | [exists x in new, (x \notin old) && edge x y]].
+
+Definition rank_of_reachable m x s := 
+  exists2 y, y \in gconnect x & m = rank y s.
+
+Definition post_dfs (roots : {set V}) (e e' : env) (m : nat) :=
+[/\ [/\ wf_env e', wf_graph e' & (sccs e' = black_gsccs e')],
+
+   [/\ 
+    exists2 s, stack e' = s ++ stack e & s \subset (blacks e'),
+    (* exists x, let: (new, old) := split_after x (stack e') in *)
+    (*       (old == stack e) /\ (new \subset blacks e'), *)
+    blacks e \subset blacks e'  & sccs e \subset sccs e' ]&
+
+   [/\
+    (* roots :&: whites e \subset blacks e', *)
+    (* roots \subset blacks e' :|: grays e', *)
+    forall x, x \in roots -> m <= rank x (stack e'),
+    m = infty \/ exists2 x, x \in roots & rank_of_reachable m x (stack e') &
+    forall y, y \in xedges (stack e') (stack e) -> m <= rank y (stack e')
+   ]
+  ].
+
+Definition dfs1_correct (dfs1 : V -> env -> nat * env) x e :=
+  let (m, e') := dfs1 x e in 
+  (x \in whites e) -> pre_dfs [set x] e ->
+  post_dfs [set x] e e' m.
+
+Definition dfs'_correct (dfs' : {set V} -> env -> nat * env) roots e :=
+  let (m, e') := dfs' roots e in
+  pre_dfs roots e ->
+  (roots \subset blacks e' :|: grays e') /\ post_dfs roots e e' m.
+
+Lemma pre_dfs'_rootsD1 roots z e : pre_dfs roots e -> pre_dfs (roots :\ z) e.
+Proof.
+move=> [to_roots e_wf e_gwf black_sccs]; split=> //.
+by move=> x x_gray y; rewrite inE => /andP[??]; rewrite to_roots.
+Qed.
+
+Lemma rank_le x (s : seq V) : rank x s <= infty.
+Admitted.
+Hint Resolve rank_le.
+
+Lemma rank_lt x (s : seq V) : x \in s -> rank x s < infty.
+Admitted.
+Hint Resolve rank_lt.
+
+Lemma rank_infty x (s : seq V) : x \notin s -> rank x s = infty.
+Admitted.
+
+Lemma dfs'_is_correct dfs1 dfsrec' (roots : {set V}) e :
+  (forall x, x \in roots -> dfs1_correct dfs1 x e) ->
+  (forall x, x \in roots -> dfs'_correct dfsrec' (roots :\ x) e) ->
+  dfs'_correct (dfs' dfs1 dfsrec') roots e.
+Proof.
+move=> dfs1_is_correct dfs'_is_correct; rewrite /dfs'_correct /dfs'.
+case: pickP => [x|no_roots]; last first.
+  move=> [gto_roots e_wf e_gwf black_sccs]; split.
+    by apply/subsetP=> x; rewrite !inE no_roots.
+  split=> //; first by split=> //; first by exists [::] => //; apply/subsetP.
+  split=> //; first by move=> x; rewrite no_roots.
+    by left.
+  by move=> y; rewrite inE => /andP[_ /existsP [x /and3P[->]]].
+move=> x_root; case: ifPn=> [x_stack|xNstack].
+  have := dfs'_is_correct _ x_root.
+  rewrite /dfs'_correct; case: (dfsrec' _ _) => [m2 e'].
+  move=> e'_correct [to_roots e_wf e_gwf black_sccs].
+  case: e'_correct; first exact: pre_dfs'_rootsD1.
+  move=> change_color [invariants monotony [pc1 pc2 pc3]].
+  split=> //.
+    rewrite -(setD1K x_root) subUset change_color sub1set !inE.
+    have [//|xNblack /=] := boolP (x \in blacks _).
+    by have [[s ->]] := monotony; rewrite mem_cat x_stack orbT.
+  split=> //; split=> //.
+  - move=> y y_root; have [->|neq_yx]:= eqVneq y x; last first.
+      by rewrite geq_min pc1 ?orbT // !inE neq_yx.
+    by have [[s -> _ _ _]] := monotony; rewrite rank_cat // geq_min leqnn.
+  - right; case: (leqP (rank x (stack e)) m2) => [rx_small|/ltnW rx_big].
+      rewrite (minn_idPl _) //.
+      exists x => //; exists x; rewrite ?inE ?connect0 //.
+      by have [[s ->]] := monotony; rewrite rank_cat.
+    rewrite (minn_idPr _) //.
+    case: pc2 rx_big=> [->|[y]]; first by rewrite leqNgt rank_lt.
+    rewrite !inE => /andP[neq_yx y_roots [z y_to_z m_def]].
+    by move=> m_small; exists y => //; exists z.
+  - by move=> y y_xedge; rewrite (@leq_trans m2) ?pc3 // geq_min leqnn orbT.
+case: ifPn=> [x_black|xNblack] //=.
+  have := dfs'_is_correct _ x_root.
+  rewrite /dfs'_correct; case: (dfsrec' _ _) => [m2 e'].
+  move=> e'_correct [to_roots e_wf e_gwf black_sccs].
+  case: e'_correct; first exact: pre_dfs'_rootsD1.
+  move=> change_color [invariants monotony [pc1 pc2 pc3]].
+  split=> //.
+    rewrite -(setD1K x_root) subUset change_color sub1set !inE.
+    by have [_ /subsetP blacks_mono _] := monotony; rewrite blacks_mono.
+  split=> //; split=> //.
+  - move=> y y_root; have [->{y y_root}|neq_yx]:= eqVneq y x; last first.
+      by rewrite geq_min pc1 ?orbT // !inE neq_yx.
+    have m2_rank: m2 <= infty by case: pc2=> [->|[?? [??->]]].
+    rewrite rank_infty //.
+    
+  - 
+    
+   rewrite 
+ 
+    have [//|xNblack /=] := boolP (x \in blacks _).
+    by have [[s ->]] := monotony; rewrite mem_cat x_stack orbT.
+    
+
+set m1 := rank x _; case: (leqP m1 m2) => [rx_small|/ltnW rx_big].
+      rewrite (minn_idPl _) //.
+      by move=> y y_xedge; rewrite (leq_trans rx_small) // pc3.
+    
+      admit.
+    
+      
+    
+    
+    
+
+  - right; case: pc2=> [->|[y]]; last first.
+      (* rewrite (minn_idPl _) //. *)
+      rewrite !inE => /andP[neq_yx y_roots [z y_to_z m_def]].
+      exists y => //. exists z=> //; rewrite -m_def.
+
+move=> y y_roots z z_to_y. /eqP[].
+    
+      
+   
+   
+
+
+    exists (last 
+     
+    
+  rewrite /pre_dfs /post_dfs //=.
+
+
+Admitted.
+
+
+Lemma 
+
 
 
 (* Definition wf_stack e := *)
@@ -243,42 +421,6 @@ Abort.
 
 
 
-Definition black_gsccs e := [set scc in gsccs | scc \subset blacks e].
-
-Definition xedges (new old : seq V) :=
-  [set y in old | [exists x in new, (x \notin old) && edge x y]].
-
-Definition pre_dfs (roots : {set V}) (e e' : env) (m : nat) :=
-  [/\ (forall x, x \in roots -> forall y, y \in grays e -> gconnect y x),
-    wf_env e, wf_graph roots e & sccs e == black_gsccs e].
-
-Definition dfs_correct (roots : {set V}) (e e' : env) (m : nat) :=
-  [/\ (forall x, x \in roots -> forall y, y \in grays e -> gconnect y x),
-    wf_env e, wf_graph roots e & sccs e == black_gsccs e]
-
-  ->
-
-  [/\ [/\ wf_env e', wf_graph roots e & (sccs e' == black_gsccs e')],
-
-   [/\ exists x, let: (new, old) := split_after x (stack e) in
-          (old == stack e) /\ (new \subset blacks e),
-    blacks e \subset blacks e'  & sccs e \subset sccs e' ],
-
-   (roots :&: whites e \subset blacks e') &
-
-   [/\ roots \subset blacks e' :|: grays e',
-    forall x, x \in roots -> m <= rank x (stack e'),
-    forall x, x \in roots -> forall y, y \in gconnect x ->
-         m != rank y (stack e') -> (m = infty) &
-    forall y, y \in xedges (stack e') (stack e) -> m <= rank y (stack e')
-   ]
-  ].
-
-Definition dfs1_correct (dfs1 : V -> env -> nat * env) x e :=
-  let (m, e') := dfs1 x e in (x \in whites e) -> dfs_correct (set1 x) e e' m.
-
-Definition dfs'_correct (dfs' : {set V} -> env -> nat * env) roots e :=
-  let (m, e') := dfs' roots e in dfs_correct roots e e' m.
 
 Lemma dfs1_is_correct (dfs' : {set V} -> env -> nat * env) (x : V) e :
   (dfs'_correct dfs' [set y in successors x] (add_stack x e)) ->
@@ -294,12 +436,6 @@ case: leqP => [rank_small|rank_big] /=; case: e' => b' s' sccs' in dfs_is_correc
       *
 Admitted.
 
-Lemma dfs'_is_correct dfs1 subdfs' (roots : {set V}) e :
-  (forall x, x \in roots -> dfs1_correct dfs1 x e) ->
-  (forall x, x \in roots -> dfs'_correct subdfs' (roots :\ x) e) ->
-  dfs'_correct (dfs' dfs1 subdfs') roots e.
-Proof.
-Admitted.
 
 Theorem tarjan_is_correct : forall n, n >= #|V| ->
   tarjan n setT (Env set0 [::] set0) = (infty, Env setT [::] gsccs).
