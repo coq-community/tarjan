@@ -534,18 +534,22 @@ have sx_subscc : is_subscc [set y in rcons s x].
     by rewrite cat_rcons -s_def wf_stack_uniq.
   by rewrite mem_cat mem_rcons mem_head.
 case: ltnP => [m1_small|m1_big] //=; rewrite !inE eqxx /=; split=> //.
+  have [x1 rank_x1 x_to_x1] : exists2 x1,
+    rank x1 (stack e1) = m1 & gconnect x x1.
+    case: pc2 m1_small => [->|]; first by rewrite /m ltnNge rank_le.
+    move=> [y]; rewrite inE => /(@connect1 _ edge) x_to_y.
+    move=> [x1 y_to_x1 rank_x1 _]; exists x1 => //.
+    by rewrite (connect_trans x_to_y).
   have [x' [rank_x' x'_gray x_to_x' ]] : exists x',
     [/\ rank x' (stack e1) < rank x (stack e1), x' \in grays e1 & gconnect x x'].
-    case: pc2 m1_small => [->|]; first by rewrite /m ltnNge rank_le.
-    move=> [x1]; rewrite inE => /(@connect1 _ edge) x_to_x1.
-    move=> [x2 x1_to_x2 -> rank_x2].
-    have x2_stack : x2 \in stack e1.
-      by rewrite -rank_lt (leq_trans rank_x2) // rank_le.
-    have [z [z_gray rank_z y_to_z]] := wf_stack_to_grays e1_gwf x2_stack.
+    move: m1_small; rewrite -{}rank_x1 => rank_x1.
+    have x1_stack : x1 \in stack e1.
+      by rewrite -rank_lt (leq_trans rank_x1) // rank_le.
+    have [z [z_gray rank_z y_to_z]] := wf_stack_to_grays e1_gwf x1_stack.
     exists z; split=> //; rewrite 2?inE ?z_gray ?andbT.
-    - rewrite (leq_ltn_trans rank_z) // (leq_trans rank_x2) // /m.
+    - rewrite (leq_ltn_trans rank_z) // (leq_trans rank_x1) // /m.
       by rewrite s_def rank_catl ?mem_head.
-    - by rewrite (connect_trans x_to_x1) // (connect_trans x1_to_x2).
+    - by rewrite (connect_trans x_to_x1).
   have neq_x'x : x' != x by apply: contraTneq rank_x' => ->; rewrite -ltnNge.
   split=> //.
   - split=> //; first exact: add_blacks_ewf.
@@ -593,8 +597,14 @@ case: ltnP => [m1_small|m1_big] //=; rewrite !inE eqxx /=; split=> //.
   - split=> //=.
     + move=> y; rewrite inE => /eqP->.
       by rewrite s_def rank_catl ?mem_head // ltnW.
-    + right.
-
+    + by right; exists x; rewrite ?set11 //; exists x1.
+    + move=> y; rewrite inE => /andP [y_stack /existsP].
+      move=> [z /and3P[z_stack1 zNstack zy]].
+      have [eq_zx|neq_zx] := eqVneq z x.
+        by rewrite pc1 // -eq_zx inE.
+      apply: pc3; rewrite inE in_cons y_stack orbT /=.
+      apply/existsP; exists z.
+      by rewrite z_stack1 in_cons negb_or neq_zx zNstack.
 split=> //.
 - split=> //.
   + apply: add_sccs_wf=> //.
