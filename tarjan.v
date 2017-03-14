@@ -485,6 +485,14 @@ Qed.
 (* move=> x_gray e_wf e_gwf; split. *)
 (* - move=> y; rewrite !inE => /predU1P [|y_black]; last first. *)
 
+Lemma path_xset_xedge x y (s : pred V) :
+  gconnect x y -> x \in s -> y \notin s ->
+  exists x' y', [/\ x' \in s, y' \notin s,
+                    gconnect x x', edge x' y' & gconnect y' y].
+Proof.
+move=> /connectP [p path_xp ->] xs yNs.
+Admitted.
+
 Lemma grays_add_blacks e x : grays (add_blacks x e) = grays e :\ x.
 Proof. by apply/setP=> y; rewrite !inE /= negb_or andbA. Qed.
 
@@ -511,6 +519,7 @@ case: post_dfs' => //=.
   by move=> z; rewrite inE => /(@connect1 _ edge).
 move=> succ_bVg [[e1_wf e1_gwf Nbw1 keep_gray black_sccs1]
                    [[s/= s_def sb] mo_b mo_sccs] [pc1 pc2 pc3]].
+set s2 := rcons s x.
 have x_stack : x \in stack e1 by rewrite s_def mem_cat mem_head orbT.
 have x_grays : x \in grays e1 by rewrite keep_gray grays_add_stack ?setU11.
 have sx_subscc : is_subscc [set y in rcons s x].
@@ -605,6 +614,28 @@ case: ltnP => [m1_small|m1_big] //=; rewrite !inE eqxx /=; split=> //.
       apply: pc3; rewrite inE in_cons y_stack orbT /=.
       apply/existsP; exists z.
       by rewrite z_stack1 in_cons negb_or neq_zx zNstack.
+have scc_max y : y \in scc_of x -> y \in s2.
+  move=> y_sccx; apply: contraTT isT => yNs2.
+  have xy : gconnect x y by have := y_sccx; rewrite inE => /and3P[].
+  have x_s2 : x \in s2 by rewrite mem_rcons mem_head.
+  have [x' [y' [x's y'Ns xx' x'y' y'y]]] := path_xset_xedge xy x_s2 yNs2.
+  have x'_sccx : x' \in scc_of x by admit.
+  have y'_sccx : y' \in scc_of x by admit.
+  apply: contraNN y'Ns => _.
+  have: y' \in ([set y in stack e1] :|:
+               (\bigcup_(scc in sccs e1) scc :|: whites e1)).
+    by rewrite !inE; case: colorP.
+  rewrite 3!inE => /or3P[].
+  - rewrite s_def -cat_rcons mem_cat => /orP[//|y'_stack].
+    have [eq_x'x|neq_s's] := eqVneq x' x.
+       have := pc1 y'; rewrite inE -eq_x'x => /(_ x'y').
+       rewrite leqNgt (leq_trans _ m1_big) // /m.
+       rewrite s_def rank_catl ?in_cons ?y'_stack ?orbT //.
+       admit.
+
+
+
+
 split=> //.
 - split=> //.
   + apply: add_sccs_wf=> //.
