@@ -1,7 +1,7 @@
 From mathcomp
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple.
 From mathcomp
-Require Import bigop finset finfun perm fingraph path.
+Require Import bigop finset finfun perm fingraph path div.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -373,11 +373,8 @@ Qed.
 
 Lemma dfs'_is_correct dfs1 dfsrec' (roots : {set V}) e :
   (forall x, x \in roots -> dfs1_correct dfs1 x e) ->
-  (forall x, x \in roots ->
-     let: (m1, e1) :=
-        if x \in stack e then (rank x (stack e), e)
-        else if x \in blacks e then (infty, e)
-             else dfs1 x e in dfs'_correct dfsrec' (roots :\ x) e1) ->
+  (forall x, x \in roots -> forall e1, whites e1 \subset whites e ->
+         dfs'_correct dfsrec' (roots :\ x) e1) ->
   dfs'_correct (dfs' dfs1 dfsrec') roots e.
 Proof.
 move=> dfs1_is_correct dfs'_is_correct; rewrite /dfs'_correct /dfs'.
@@ -390,7 +387,7 @@ case: pickP => [x|no_roots]; last first.
   by move=> y; rewrite inE => /andP[_ /existsP [x /and3P[->]]].
 move=> x_root; have := dfs'_is_correct _ x_root; rewrite /dfs'_correct.
 case: ifPn=> [x_stack|xNstack].
-  case: (dfsrec' _ _) => [m2 e'].
+  move=> /(_ _ (subxx _)); case: (dfsrec' _ _) => [m2 e'].
   move=> e'_correct [to_roots e_wf e_gwf Nbw black_sccs].
   have e_uniq := wf_stack_uniq e_wf.
   case: e'_correct; first exact: (pre_dfs_subroots (subD1set _ _)).
@@ -413,7 +410,7 @@ case: ifPn=> [x_stack|xNstack].
     by move=> m_small; exists y => //; exists z.
   - by move=> y y_xedge; rewrite (@leq_trans m2) ?pc3 // geq_min leqnn orbT.
 case: ifPn=> [x_black|xNblack] //=.
-  case: (dfsrec' _ _) => [m2 e'].
+  move=> /(_ _ (subxx _)); case: (dfsrec' _ _) => [m2 e'].
   move=> e'_correct [to_roots e_wf e_gwf Nbw black_sccs].
   case: e'_correct; first exact: (pre_dfs_subroots (subD1set _ _)).
   move=> change_color [[e'_wf e'_gwf keep_gray Nbw' sccs'_black]
@@ -431,8 +428,9 @@ case: ifPn=> [x_black|xNblack] //=.
     by move=> [y]; rewrite !inE => /andP[_ ?]; right; exists y.
   - by move=> y y_xedge; rewrite (@leq_trans m2) ?pc3 // geq_min leqnn orbT.
 have := dfs1_is_correct _ x_root; rewrite /dfs1_correct.
-case: (dfs1 _ _) => [m1 e1]; case: (dfsrec' _ _) => [m2 e2].
-move=> post_dfs1 post_dfs' pre {dfs1_is_correct dfs'_is_correct}.
+case: (dfs1 _ _) => [m1 e1] post_dfs1.
+move=> /(_ e1); case: (dfsrec' _ _) => [m2 e2] post_dfs'.
+move=> pre {dfs1_is_correct dfs'_is_correct}.
 have [e_access_to e_wf e_gwf Nbw sccs_black] := pre.
 have e_uniq := wf_stack_uniq e_wf.
 have x_white : x \in whites e by case: colorP xNstack xNblack.
@@ -442,7 +440,8 @@ case=> [x_black [[e1_wf e1_gwf Nbw1 keep_gray sccs_e1]
        [[s1 s1_def s1b] mo_b1 mo_sccs1] [pc1 pc2 pc3]]].
 have e1_uniq := wf_stack_uniq e1_wf.
 case: post_dfs'.
-  split=> // y; rewrite !inE s1_def mem_cat.
+- by rewrite subCset setCK setUSS // keep_gray.
+- split=> // y; rewrite !inE s1_def mem_cat.
   case: (y \in s1) (subsetP s1b y) => //= [->//|_ /andP[yNb ys]].
   move=> z; rewrite inE => /andP[_ z_roots]; rewrite e_access_to //.
   by rewrite !inE ys andbT; apply: contraNN yNb; apply/subsetP.
@@ -822,12 +821,49 @@ split=> //.
     by move=> [z /and3P[->]].
 Qed.
 
+Lemma ltn_div2r p m n : p > 0 -> m %/ p < n %/ p -> m < n.
+Proof.
+move=> p_gt0 lt_div; rewrite (divn_eq m p) (divn_eq n p).
+rewrite -(subnKC lt_div) mulnDl mulSn -!addnA addnCA ltn_add2l.
+by rewrite (leq_trans (ltn_pmod _ _)) // leq_addr.
+Qed.
+
+Lemma ltn_mod2r p m n : p > 0 -> m %/ p = n %/ p -> m %% p < n %% p -> m < n.
+Proof.
+move=> p_gt0 eq_div lt_mod; rewrite (divn_eq m p) (divn_eq n p).
+by rewrite {}eq_div ltn_add2l in lt_mod *.
+Qed.
+
 Theorem dfs'_terminates n (roots : {set V}) e :
-  n >= #|whites e| * #|V| + #|roots| ->
+  n >= #|whites e| * #|V|.+1 + #|roots| ->
   dfs'_correct (tarjan n) roots e.
 Proof.
-elim: n.
-Abort.
+move=> n_ge; wlog ->: e n roots {n_ge} / roots = set0 => [noroot|]; last first.
+  have := @dfs'_is_correct (dfs1 (tarjan 0)) (tarjan 0) set0 e.
+  rewrite /tarjan /dfs'_correct /dfs' /=.
+  case: n=> [|n /=]; case: pickP => [x|_/=]; rewrite ?inE //;
+  by apply => ?; rewrite inE.
+have [V0|VN0] := posnP #|V|.
+  have := max_card (mem roots).
+  by rewrite V0 leqn0 cards_eq0 => /eqP /noroot; apply.
+elim: n => [|n IHn] in roots e n_ge *.
+  move: n_ge; rewrite leqn0 addn_eq0 cards_eq0.
+  by move=> /andP [_ /eqP/noroot]; apply.
+move=> pre; rewrite /dfs'_correct /=.
+apply: dfs'_is_correct => //= x x_root.
+  move=> x_white; apply: dfs1_is_correct => //; apply: IHn.
+  rewrite whites_add_stack cardsDS ?sub1set // cards1 subn1.
+  rewrite -ltnS (leq_trans _ n_ge) //.
+  rewrite (@ltn_div2r #|V|.+1) ?divnMDl ?divn_small ?addn0 ?ltnS ?max_card //=.
+  by rewrite prednK //; apply/card_gt0P; exists x.
+move=> e1 whites_e1; apply: IHn; rewrite -ltnS (leq_trans _ n_ge) //.
+have /subset_leq_card := whites_e1.
+rewrite leq_eqVlt => /predU1P [->|lt_wh]; last first.
+  by rewrite (@ltn_div2r #|V|.+1) ?divnMDl ?divn_small ?addn0 ?ltnS ?max_card.
+rewrite (@ltn_mod2r #|V|.+1) ?divnMDl ?divn_small ?addn0 ?ltnS ?max_card //=.
+rewrite ?modnMDl ?modn_small ?ltnS ?max_card //.
+by rewrite [X in _ < X](cardsD1 x) x_root.
+Qed.
 
 Theorem tarjan_is_correct : forall n, n >= #|V| * #|V| + #|V| ->
   tarjan n setT (Env set0 [::] set0) = (infty, Env setT [::] gsccs).
