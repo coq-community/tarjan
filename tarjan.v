@@ -92,8 +92,8 @@ Definition dfs' dfs1 dfs' (roots : {set V}) e :=
          else dfs1 x e in
        let: (m2, e2) := dfs' roots' e1 in (minn m1 m2, e2).
 
-Fixpoint tarjan n : {set V} -> env -> nat * env :=
-  if n is n.+1 then dfs' (dfs1 (tarjan n)) (tarjan n)
+Fixpoint tarjan_rec n : {set V} -> env -> nat * env :=
+  if n is n.+1 then dfs' (dfs1 (tarjan_rec n)) (tarjan_rec n)
   else fun r e => (infty, e).
 
 Notation gbiconnect := [rel x y | gconnect x y && gconnect y x].
@@ -834,13 +834,13 @@ move=> p_gt0 eq_div lt_mod; rewrite (divn_eq m p) (divn_eq n p).
 by rewrite {}eq_div ltn_add2l in lt_mod *.
 Qed.
 
-Theorem dfs'_terminates n (roots : {set V}) e :
+Theorem tarjan_rec_terminates n (roots : {set V}) e :
   n >= #|whites e| * #|V|.+1 + #|roots| ->
-  dfs'_correct (tarjan n) roots e.
+  dfs'_correct (tarjan_rec n) roots e.
 Proof.
 move=> n_ge; wlog ->: e n roots {n_ge} / roots = set0 => [noroot|]; last first.
-  have := @dfs'_is_correct (dfs1 (tarjan 0)) (tarjan 0) set0 e.
-  rewrite /tarjan /dfs'_correct /dfs' /=.
+  have := @dfs'_is_correct (dfs1 (tarjan_rec 0)) (tarjan_rec 0) set0 e.
+  rewrite /tarjan_rec /dfs'_correct /dfs' /=.
   case: n=> [|n /=]; case: pickP => [x|_/=]; rewrite ?inE //;
   by apply => ?; rewrite inE.
 have [V0|VN0] := posnP #|V|.
@@ -865,9 +865,48 @@ rewrite ?modnMDl ?modn_small ?ltnS ?max_card //.
 by rewrite [X in _ < X](cardsD1 x) x_root.
 Qed.
 
-Theorem tarjan_is_correct : forall n, n >= #|V| * #|V| + #|V| ->
-  tarjan n setT (Env set0 [::] set0) = (infty, Env setT [::] gsccs).
+Definition e0 := (Env set0 [::] set0).
+
+Lemma grays0 : grays e0 = set0.
+Proof. by apply/setP=> x; rewrite !inE /=. Qed.
+
+Lemma cover0 : cover set0 = set0 :> {set V}.
 Proof.
-Abort.
+by apply/setP=> x; rewrite !inE; apply/negP=> /bigcupP[?]; rewrite inE.
+Qed.
+
+Definition eT := (Env setT [::] gsccs).
+
+Let N := #|V| * #|V|.+1 + #|V|.
+
+Lemma tarjan_rec_is_correct : tarjan_rec N setT e0 = (infty, eT).
+Proof.
+have := @tarjan_rec_terminates N setT e0; rewrite /dfs'_correct.
+case: tarjan_rec => [m e] [].
+- by rewrite ?leq_add ?leq_mul ?max_card.
+- split=> //.
+  + by move=> x; rewrite grays0 inE.
+  + by split=> //; rewrite /= ?cover0 ?grays0 ?set0D ?setU0.
+  + by move=> x; rewrite inE.
+  + apply/setP=> y; rewrite !inE /= subset0 andbC; case: eqP => //= ->.
+    by have /and3P [_ _ /negPf->]:= gsccs_partition.
+rewrite subTset => /eqP blackse [[e_wf _ _]].
+rewrite grays0 => grayse; rewrite grayse setU0 in blackse.
+rewrite /black_gsccs /= blackse => sccse _ [_ minfty _].
+have {sccse}sccse: sccs e = gsccs.
+  by apply/setP=> scc; rewrite sccse inE subsetT andbT.
+have stacke : stack e = [::].
+  have := wf_stack e_wf; rewrite grayse blackse sccse.
+  rewrite (cover_partition gsccs_partition) set0U setDv.
+ by case: stack => // x s /setP /(_ x); rewrite !inE eqxx.
+congr (_, _); first by case: minfty => // [[x _ [y xy]]]; rewrite stacke.
+case: e blackse sccse stacke {e_wf grayse minfty} => //=.
+by move=> _ _ _ -> -> ->; congr Env.
+Qed.
+
+Definition tarjan := sccs (tarjan_rec N setT e0).2.
+
+Theorem tarjan_correct : tarjan = gsccs.
+Proof. by rewrite /tarjan tarjan_rec_is_correct. Qed.
 
 End tarjan.
