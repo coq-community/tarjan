@@ -348,19 +348,21 @@ move=> sub_roots [to_roots e_wf e_gwf black_sccs Nbw]; split=> //.
 by move=> x x_gray y y_roots'; rewrite to_roots //; apply: subsetP y_roots'.
 Qed.
 
-Lemma rank_le x (s : seq V) : rank x s <= infty.
+Lemma rank_le x (s : seq V) : uniq s -> rank x s <= infty.
 Proof.
-Admitted.
-Hint Resolve rank_le.
+move=> s_uniq; rewrite rankE; case: ifP => // x_s.
+by rewrite (leq_trans (index_size _ _)) ?size_rev -?(card_uniqP _) // max_card.
+Qed.
 
-Lemma rank_lt x (s : seq V) : (rank x s < infty) = (x \in s).
+Lemma rank_lt x (s : seq V) : uniq s -> (rank x s < infty) = (x \in s).
 Proof.
-Admitted.
-Hint Resolve rank_lt.
+rewrite rankE; case: ifPn; rewrite ?ltnn // => x_s s_uniq.
+rewrite (@leq_trans (size (rev s))) ?index_mem ?mem_rev ?size_rev //.
+by rewrite -?(card_uniqP _) // max_card.
+Qed.
 
 Lemma rank_infty x (s : seq V) : x \notin s -> rank x s = infty.
-Proof.
-Admitted.
+Proof. by rewrite rankE => /negPf->. Qed.
 
 Lemma subset_bigcup (sccs sccs' : {set {set V}}) :
   sccs \subset sccs' -> cover sccs \subset cover sccs'.
@@ -368,12 +370,6 @@ Proof.
 move=> /subsetP subsccs; apply/subsetP=> x /bigcupP [scc /subsccs].
 by move=> scc' x_in; apply/bigcupP; exists scc.
 Qed.
-
-Lemma split_after_cat_rcons (x : V) s s' :
-  split_after x (s ++ x :: s') = (rcons s x, s').
-Proof.
-rewrite /split_after /=.
-Admitted.
 
 Lemma dfs'_is_correct dfs1 dfsrec' (roots : {set V}) e :
   (forall x, x \in roots -> dfs1_correct dfs1 x e) ->
@@ -396,6 +392,7 @@ move=> x_root; have := dfs'_is_correct _ x_root; rewrite /dfs'_correct.
 case: ifPn=> [x_stack|xNstack].
   case: (dfsrec' _ _) => [m2 e'].
   move=> e'_correct [to_roots e_wf e_gwf Nbw black_sccs].
+  have e_uniq := wf_stack_uniq e_wf.
   case: e'_correct; first exact: (pre_dfs_subroots (subD1set _ _)).
   move=> change_color [invariants monotony [pc1 pc2 pc3]].
   split=> //.
@@ -411,7 +408,7 @@ case: ifPn=> [x_stack|xNstack].
       exists x => //; exists x; rewrite ?inE ?connect0 //.
       by have [[s ->]] := monotony; rewrite rank_catl.
     rewrite (minn_idPr _) //.
-    case: pc2 rx_big=> [->|[y]]; first by rewrite leqNgt rank_lt x_stack.
+    case: pc2 rx_big=> [->|[y]]; first by rewrite leqNgt rank_lt ?x_stack.
     rewrite !inE => /andP[neq_yx y_roots [z y_to_z m_def]].
     by move=> m_small; exists y => //; exists z.
   - by move=> y y_xedge; rewrite (@leq_trans m2) ?pc3 // geq_min leqnn orbT.
@@ -421,9 +418,10 @@ case: ifPn=> [x_black|xNblack] //=.
   case: e'_correct; first exact: (pre_dfs_subroots (subD1set _ _)).
   move=> change_color [[e'_wf e'_gwf keep_gray Nbw' sccs'_black]
                        [mon1 mon2 mon3] [pc1 pc2 pc3]].
+  have e'_uniq := wf_stack_uniq e'_wf.
   split=> //.
     by rewrite -(setD1K x_root) subUset change_color sub1set !inE (subsetP mon2).
-  have m2_rank: m2 <= infty by case: pc2=> [->|[?? [??->]]].
+  have m2_rank: m2 <= infty by case: pc2=> [->|[?? [??->]]]; rewrite ?rank_le.
   split=> //; split=> //.
   - move=> y y_root; have [->{y y_root}|neq_yx]:= eqVneq y x; last first.
       by rewrite geq_min pc1 ?orbT // !inE neq_yx.
@@ -436,11 +434,13 @@ have := dfs1_is_correct _ x_root; rewrite /dfs1_correct.
 case: (dfs1 _ _) => [m1 e1]; case: (dfsrec' _ _) => [m2 e2].
 move=> post_dfs1 post_dfs' pre {dfs1_is_correct dfs'_is_correct}.
 have [e_access_to e_wf e_gwf Nbw sccs_black] := pre.
+have e_uniq := wf_stack_uniq e_wf.
 have x_white : x \in whites e by case: colorP xNstack xNblack.
 have := post_dfs1 x_white (pre_dfs_subroots _ pre).
 rewrite sub1set x_root => /(_ isT) {post_dfs1}.
 case=> [x_black [[e1_wf e1_gwf Nbw1 keep_gray sccs_e1]
        [[s1 s1_def s1b] mo_b1 mo_sccs1] [pc1 pc2 pc3]]].
+have e1_uniq := wf_stack_uniq e1_wf.
 case: post_dfs'.
   split=> // y; rewrite !inE s1_def mem_cat.
   case: (y \in s1) (subsetP s1b y) => //= [->//|_ /andP[yNb ys]].
@@ -448,6 +448,7 @@ case: post_dfs'.
   by rewrite !inE ys andbT; apply: contraNN yNb; apply/subsetP.
 move=> rootsDx_subset [[e2_wf e2_gwf Nbw2 keep_gray2 sccs_e2]
   [[s2 s2_def s2b] mo_b2 mo_sccs2] [pc21 pc22 pc23]].
+have e2_uniq := wf_stack_uniq e2_wf.
 split.
   rewrite -(setD1K x_root) subUset rootsDx_subset andbT sub1set.
   by rewrite inE (subsetP mo_b2).
@@ -458,14 +459,14 @@ split; first by rewrite keep_gray2 keep_gray.
     by apply/subsetP/(subset_trans s1b).
   + exact/(subset_trans mo_b1).
   + exact/(subset_trans mo_sccs1).
-have m1_rank: m1 <= infty by case: pc2=> [->|[?? [??->]]].
-have m2_rank: m2 <= infty by case: pc22=> [->|[?? [??->]]].
+have m1_rank: m1 <= infty by case: pc2=> [->|[?? [??->]]]; rewrite ?rank_le.
+have m2_rank: m2 <= infty by case: pc22=> [->|[?? [??->]]]; rewrite ?rank_le.
 split.
 - move=> y y_roots; have [->|neq_yx] := eqVneq y x; last first.
     by rewrite (@leq_trans m2) ?geq_minr // pc21 // !inE neq_yx.
   have [xs|xNs] := boolP (x \in stack e1).
     by rewrite s2_def rank_catl // (@leq_trans m1) ?geq_minl // pc1 ?inE.
-  have x_sccs2 : x \in \bigcup_(scc in sccs e2) scc.
+  have x_sccs2 : x \in cover (sccs e2).
     apply: (subsetP (subset_bigcup mo_sccs2)).
     by case: colorP xNs x_black.
   by rewrite rank_infty ?geq_min ?m1_rank //; case: colorP x_sccs2.
@@ -474,7 +475,7 @@ split.
     case: ltngtP m1_rank => // [m1_lt _|]; last by left.
     right; exists x => //.
     case: pc2=> z; rewrite inE => /eqP -> [t x_to_t m1_def].
-    by exists t => //; rewrite s2_def rank_catl // -rank_lt -m1_def.
+    by exists t => //; rewrite s2_def rank_catl // -rank_lt -?m1_def.
   + case: (leqP m1 m2) => [m12|/ltnW m21]; last first.
       rewrite (minn_idPr _) //.
       case: m2_reachable => y; rewrite !inE => /andP[_ y_root] [z y_to_z m2_def].
@@ -484,7 +485,7 @@ split.
     right; exists x => //; case: pc2=> [m1_infty|[z]].
       by rewrite m1_infty ltnn in m1_lt.
     rewrite inE => /eqP -> [t x_to_t m1_def].
-    by exists t => //; rewrite s2_def rank_catl // -rank_lt -m1_def.
+    by exists t => //; rewrite s2_def rank_catl // -rank_lt -?m1_def.
 - move=> y.
   rewrite !inE => /andP [y_s0 /existsP[z /and3P [z_s2 zNs0 z_to_y]]].
   move: z_s2; rewrite s2_def mem_cat orbC.
@@ -498,15 +499,23 @@ split.
   by rewrite -s1_def zNs1.
 Qed.
 
-Definition is_subscc (A : {set V}) := {in A &, forall x y, gconnect x y}.
+Definition is_subscc (A : {set V}) := A != set0 /\ {in A &, forall x y, gconnect x y}.
 
 Lemma is_subscc_in_scc (A : {set V}) :
   is_subscc A -> exists2 scc, scc \in gsccs & A \subset scc.
-Admitted.
+Proof.
+move=> []; have [->|[x xA]] := set_0Vmem A; first by rewrite eqxx.
+move=> AN0 A_sub; exists (scc_of x).
+  by rewrite pblock_mem ?(cover_partition gsccs_partition).
+by apply/subsetP => y yA; rewrite mem_scc /= !A_sub //.
+Qed.
 
 Lemma is_subscc1 x (A : {set V}) : x \in A ->
   (forall y, y \in A -> gconnect x y /\ gconnect y x) -> is_subscc A.
-Admitted.
+Proof.
+move=> xA AP; split; first by apply: contraTneq xA => ->; rewrite inE.
+by move=> y z /AP [xy yx] /AP [xz zx]; rewrite (connect_trans yx).
+Qed.
 
 Lemma rank_mem x s : x \in s -> rank x s < size s.
 Proof. by move=> x_s; rewrite rankE x_s -size_rev index_mem mem_rev. Qed.
@@ -563,37 +572,39 @@ Qed.
 
 Lemma grays_add_sccs e x :
   let s := take (index x (stack e)) (stack e) in
-  s \subset blacks e ->
+  uniq (stack e) -> s \subset blacks e -> x \in grays e ->
   grays (add_sccs x e) = grays e :\ x.
-Proof. Admitted.
+Proof.
+move=> /= se_uniq sb x_gray; rewrite /add_sccs /grays /=.
+case: splitP sb se_uniq; first by rewrite grays_stack.
+move=> s s' sb sxs'_uniq.
+apply/setP=> y; rewrite !inE mem_cat mem_rcons in_cons.
+have [->|] //= := altP eqP; rewrite orbC ![(y \notin _) && _]andbC.
+have [|yNs' neq_yx] //= := boolP (y \in s').
+by have [y_s|] //= := boolP (y \in s); rewrite (subsetP sb).
+Qed.
 
 Lemma whites_add_sccs e x :
   let s := take (index x (stack e)) (stack e) in
-  s \subset blacks e -> x \in grays e ->
+  x \in grays e -> uniq (stack e) -> s \subset blacks e ->
   whites (add_sccs x e) = whites e.
 Proof.
-rewrite /= => s2_black x_gray.
-apply/setP=> y; rewrite !inE /=.
-Admitted.
+move=> /= x_gray se_uniq sb; rewrite /whites grays_add_sccs //=.
+by rewrite setUCA setUA setD1K.
+Qed.
 
-Lemma blacks_add_sccs e x :
-  let s := take (index x (stack e)) (stack e) in
-  s \subset blacks e ->
-  blacks (add_sccs x e) = x |: blacks e.
-Proof.
-Admitted.
+Lemma blacks_add_sccs e x : blacks (add_sccs x e) = x |: blacks e.
+Proof. by []. Qed.
 
 Lemma sccs_add_sccs e x :
   let s := take (index x (stack e)) (stack e) in
   sccs (add_sccs x e) = [set y in rcons s x] |: sccs e.
-Proof.
-Admitted.
+Proof. by []. Qed.
 
 Lemma stack_add_sccs e x :
   let s := drop (index x (stack e)).+1 (stack e) in
   stack (add_sccs x e) = s.
-Proof.
-Admitted.
+Proof. by []. Qed.
 
 Lemma dfs1_is_correct dfs' (x : V) e :
   (dfs'_correct dfs' [set y in successors x] (add_stack x e)) ->
@@ -602,6 +613,7 @@ Proof.
 rewrite /dfs1 /dfs1_correct /dfs'_correct; case: (dfs' _ _) => m1 e1.
 move=> post_dfs'; set m := rank x _.
 move=> x_white [access_to_x e_wf e_gwf Nbw black_sccs].
+have e_uniq := wf_stack_uniq e_wf.
 case: post_dfs' => //=.
   split => //; do?[exact: add_stack_ewf|exact: add_stack_gwf]; last first.
      move=> y /Nbw; rewrite whites_add_stack.
@@ -614,6 +626,9 @@ case: post_dfs' => //=.
 move=> succ_bVg [[e1_wf e1_gwf Nbw1 keep_gray black_sccs1]
                    [[s/= s_def sb] mo_b mo_sccs] [pc1 pc2 pc3]].
 set s2 := rcons s x.
+have e1_uniq := wf_stack_uniq e1_wf.
+have xe_uniq : uniq (x :: stack e).
+  by have := e1_uniq; rewrite s_def cat_uniq => /and3P [].
 have x_stack : x \in stack e1 by rewrite s_def mem_cat mem_head orbT.
 have x_grays : x \in grays e1 by rewrite keep_gray grays_add_stack ?setU11.
 have sx_subscc : is_subscc [set y in rcons s x].
@@ -621,7 +636,7 @@ have sx_subscc : is_subscc [set y in rcons s x].
   move=> y; rewrite !inE mem_rcons in_cons => /predU1P [->//|y_s]; split.
     apply: (@wf_grays_to_stack e1) => //; first by rewrite s_def mem_cat y_s.
     rewrite s_def rank_catl ?mem_head // rank_catr //=; last first.
-       by rewrite -(@uniq_catLR _ _ s) ?mem_cat ?y_s // -?s_def wf_stack_uniq.
+       by rewrite -(@uniq_catLR _ _ s) ?mem_cat ?y_s // -?s_def //.
     rewrite rankE mem_head (leq_trans (index_size _ _)) //.
     by rewrite size_rev leq_addr.
   have [] := @wf_stack_to_grays _ e1_gwf y; first by rewrite s_def mem_cat y_s.
@@ -639,7 +654,7 @@ have sx_subscc : is_subscc [set y in rcons s x].
 case: ltnP => [m1_small|m1_big] //=; rewrite !inE eqxx /=; split=> //.
   have [x1 rank_x1 x_to_x1] : exists2 x1,
     rank x1 (stack e1) = m1 & gconnect x x1.
-    case: pc2 m1_small => [->|]; first by rewrite /m ltnNge rank_le.
+    case: pc2 m1_small => [->|]; first by rewrite /m ltnNge ?rank_le.
     move=> [y]; rewrite inE => /(@connect1 _ edge) x_to_y.
     move=> [x1 y_to_x1 rank_x1 _]; exists x1 => //.
     by rewrite (connect_trans x_to_y).
@@ -647,7 +662,7 @@ case: ltnP => [m1_small|m1_big] //=; rewrite !inE eqxx /=; split=> //.
     [/\ rank x' (stack e1) < rank x (stack e1), x' \in grays e1 & gconnect x x'].
     move: m1_small; rewrite -{}rank_x1 => rank_x1.
     have x1_stack : x1 \in stack e1.
-      by rewrite -rank_lt (leq_trans rank_x1) // rank_le.
+      by rewrite -rank_lt ?(leq_trans rank_x1) // rank_le.
     have [z [z_gray rank_z y_to_z]] := wf_stack_to_grays e1_gwf x1_stack.
     exists z; split=> //; rewrite 2?inE ?z_gray ?andbT.
     - rewrite (leq_ltn_trans rank_z) // (leq_trans rank_x1) // /m.
@@ -802,43 +817,19 @@ split=> //.
   + by rewrite sccs_add_sccs take_s (subset_trans mo_sccs) ?subsetU1.
 - split=> //; do ?by [left].
   + move=> y; rewrite inE => /eqP->.
-    by rewrite stack_add_sccs drop_s leqNgt rank_lt whites_stackF.
+    by rewrite stack_add_sccs drop_s leqNgt rank_lt ?whites_stackF.
   + move=> y; rewrite inE stack_add_sccs drop_s => /andP[_ /existsP].
     by move=> [z /and3P[->]].
 Qed.
 
 
-(* Definition wf_stack e := *)
-(*   [/\ wf_color e, *)
-(*       uniq (stack e), *)
-(*       forall x, x \in grays e -> forall y, y \in stack e -> *)
-(*           (rank x (stack e) <= rank y (stack e)) -> gconnect x y & *)
-(*       forall y, y \in stack e -> exists2 x, x \in grays e & *)
-(*           (rank x (stack e) <= rank y (stack e)) && gconnect y x *)
-(*   ]. *)
-
-
-
-
-(* Lemma dfs1_is_correct (dfs' : {set V} -> env -> nat * env) (x : V) e : *)
-(*   (dfs'_correct dfs' [set y in successors x] (add_stack x e)) -> *)
-(*   dfs1_correct (dfs1 dfs') x e. *)
+(* Theorem tarjan_terminates e roots n: n >= #|whites e| * #|V| + #|roots| -> *)
+(*   tarjan n roots e = (infty, Env setT [::] gsccs). *)
 (* Proof. *)
-(* rewrite /dfs1_correct /dfs1 /=. *)
-(* rewrite /dfs'_correct. *)
-(* case: (dfs' _ _) => m e' /= dfs_is_correct. *)
-(* case: leqP => [rank_small|rank_big] /=; case: e' => b' s' sccs' in dfs_is_correct *. *)
-(*   move=> x_white []; split. *)
-(*   - split. *)
-(*     + split. *)
-(*       * *)
-(* Admitted. *)
 
-
-Theorem tarjan_is_correct : forall n, n >= #|V| ->
+Theorem tarjan_is_correct : forall n, n >= #|V| * #|V| + #|V| ->
   tarjan n setT (Env set0 [::] set0) = (infty, Env setT [::] gsccs).
 Proof.
-
 move=> n n_geV.
 elim: n n_geV => /= [|n IHn].
   rewrite leqn0 -cardsT cards_eq0 => /eqP V_eq0; rewrite V_eq0.
