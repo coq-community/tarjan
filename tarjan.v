@@ -131,16 +131,6 @@ Definition def_scc scc x := @def_pblock _ _ scc x trivIset_gsccs.
 (* by apply/eqP; rewrite eqEsubset !sub_ssc_of. *)
 (* Qed. *)
 
-Lemma mem_gsccsP (scc : {set V}) :
-  reflect (exists x, scc = scc_of x) (scc \in gsccs).
-Proof.
-apply: (iffP idP); last first.
-
-  move=> sccP.
-
-
-Proof.
-
 Inductive wf_env e := WfEnv {
    wf_stack : [set x in stack e] =
               grays e :|: (blacks e :\: cover (sccs e));
