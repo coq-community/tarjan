@@ -109,6 +109,8 @@ Definition gsccs := equivalence_partition gbiconnect setT.
 Lemma gsccs_partition : partition gsccs setT.
 Proof. by apply: equivalence_partitionP => ?*; apply: gbiconnect_equiv. Qed.
 
+Definition cover_gsccs := cover_partition gsccs_partition.
+
 Lemma trivIset_gsccs : trivIset gsccs.
 Proof. by case/and3P: gsccs_partition. Qed.
 Hint Resolve trivIset_gsccs.
@@ -504,8 +506,7 @@ Lemma is_subscc_in_scc (A : {set V}) :
   is_subscc A -> exists2 scc, scc \in gsccs & A \subset scc.
 Proof.
 move=> []; have [->|[x xA]] := set_0Vmem A; first by rewrite eqxx.
-move=> AN0 A_sub; exists (scc_of x).
-  by rewrite pblock_mem ?(cover_partition gsccs_partition).
+move=> AN0 A_sub; exists (scc_of x); first by rewrite pblock_mem ?cover_gsccs.
 by apply/subsetP => y yA; rewrite mem_scc /= !A_sub //.
 Qed.
 
@@ -890,18 +891,16 @@ case: tarjan_rec => [m e] [].
   + by move=> x; rewrite inE.
   + apply/setP=> y; rewrite !inE /= subset0 andbC; case: eqP => //= ->.
     by have /and3P [_ _ /negPf->]:= gsccs_partition.
-rewrite subTset => /eqP blackse [[e_wf _ _]].
+rewrite subTset => /eqP blackse [[[stack_wf _ _] _ _]].
 rewrite grays0 => grayse; rewrite grayse setU0 in blackse.
 rewrite /black_gsccs /= blackse => sccse _ [_ minfty _].
 have {sccse}sccse: sccs e = gsccs.
   by apply/setP=> scc; rewrite sccse inE subsetT andbT.
 have stacke : stack e = [::].
-  have := wf_stack e_wf; rewrite grayse blackse sccse.
-  rewrite (cover_partition gsccs_partition) set0U setDv.
- by case: stack => // x s /setP /(_ x); rewrite !inE eqxx.
+  have := stack_wf; rewrite grayse blackse sccse cover_gsccs set0U setDv.
+  by case: stack => // x s /setP /(_ x); rewrite !inE eqxx.
 congr (_, _); first by case: minfty => // [[x _ [y xy]]]; rewrite stacke.
-case: e blackse sccse stacke {e_wf grayse minfty} => //=.
-by move=> _ _ _ -> -> ->; congr Env.
+by case: e blackse sccse stacke {stack_wf grayse minfty} => //= *; congr Env.
 Qed.
 
 Definition tarjan := sccs (tarjan_rec N setT e0).2.
