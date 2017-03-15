@@ -822,23 +822,16 @@ split=> //.
     by move=> [z /and3P[->]].
 Qed.
 
-
-(* Theorem tarjan_terminates e roots n: n >= #|whites e| * #|V| + #|roots| -> *)
-(*   tarjan n roots e = (infty, Env setT [::] gsccs). *)
-(* Proof. *)
+Theorem dfs'_terminates n (roots : {set V}) e :
+  n >= #|whites e| * #|V| + #|roots| ->
+  dfs'_correct (tarjan n) roots e.
+Proof.
+elim: n.
+Abort.
 
 Theorem tarjan_is_correct : forall n, n >= #|V| * #|V| + #|V| ->
   tarjan n setT (Env set0 [::] set0) = (infty, Env setT [::] gsccs).
 Proof.
-move=> n n_geV.
-elim: n n_geV => /= [|n IHn].
-  rewrite leqn0 -cardsT cards_eq0 => /eqP V_eq0; rewrite V_eq0.
-(*   suff -> : sccs = set0 by []. *)
-(*   apply: contraTeq isT => /set0Pn [x] /imsetP [i]. *)
-(*   by have := in_setT i; rewrite V_eq0 inE. *)
-(* move=> Sn_geV; rewrite /dfs'. *)
-(* have [x xV /=|/= ?] := pickP; last first. *)
-(*   admit. *)
 Abort.
 
 End tarjan.
