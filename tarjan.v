@@ -349,14 +349,17 @@ by move=> x x_gray y y_roots'; rewrite to_roots //; apply: subsetP y_roots'.
 Qed.
 
 Lemma rank_le x (s : seq V) : rank x s <= infty.
+Proof.
 Admitted.
 Hint Resolve rank_le.
 
 Lemma rank_lt x (s : seq V) : (rank x s < infty) = (x \in s).
+Proof.
 Admitted.
 Hint Resolve rank_lt.
 
 Lemma rank_infty x (s : seq V) : x \notin s -> rank x s = infty.
+Proof.
 Admitted.
 
 Lemma subset_bigcup (sccs sccs' : {set {set V}}) :
@@ -365,6 +368,12 @@ Proof.
 move=> /subsetP subsccs; apply/subsetP=> x /bigcupP [scc /subsccs].
 by move=> scc' x_in; apply/bigcupP; exists scc.
 Qed.
+
+Lemma split_after_cat_rcons (x : V) s s' :
+  split_after x (s ++ x :: s') = (rcons s x, s').
+Proof.
+rewrite /split_after /=.
+Admitted.
 
 Lemma dfs'_is_correct dfs1 dfsrec' (roots : {set V}) e :
   (forall x, x \in roots -> dfs1_correct dfs1 x e) ->
@@ -491,6 +500,10 @@ Qed.
 
 Definition is_subscc (A : {set V}) := {in A &, forall x y, gconnect x y}.
 
+Lemma is_subscc_in_scc (A : {set V}) :
+  is_subscc A -> exists2 scc, scc \in gsccs & A \subset scc.
+Admitted.
+
 Lemma is_subscc1 x (A : {set V}) : x \in A ->
   (forall y, y \in A -> gconnect x y /\ gconnect y x) -> is_subscc A.
 Admitted.
@@ -548,13 +561,38 @@ Proof.
 by apply/setP=> y; rewrite !inE; case: (_ == _) (_ \in _) (_ \in _) => [] [].
 Qed.
 
-Lemma whites_add_sccs e x :
+Lemma grays_add_sccs e x :
   let s := take (index x (stack e)) (stack e) in
   s \subset blacks e ->
-  whites (add_sccs x e) = whites e :\ x.
+  grays (add_sccs x e) = grays e :\ x.
+Proof. Admitted.
+
+Lemma whites_add_sccs e x :
+  let s := take (index x (stack e)) (stack e) in
+  s \subset blacks e -> x \in grays e ->
+  whites (add_sccs x e) = whites e.
 Proof.
-rewrite /= => s2_black.
+rewrite /= => s2_black x_gray.
 apply/setP=> y; rewrite !inE /=.
+Admitted.
+
+Lemma blacks_add_sccs e x :
+  let s := take (index x (stack e)) (stack e) in
+  s \subset blacks e ->
+  blacks (add_sccs x e) = x |: blacks e.
+Proof.
+Admitted.
+
+Lemma sccs_add_sccs e x :
+  let s := take (index x (stack e)) (stack e) in
+  sccs (add_sccs x e) = [set y in rcons s x] |: sccs e.
+Proof.
+Admitted.
+
+Lemma stack_add_sccs e x :
+  let s := drop (index x (stack e)).+1 (stack e) in
+  stack (add_sccs x e) = s.
+Proof.
 Admitted.
 
 Lemma dfs1_is_correct dfs' (x : V) e :
@@ -670,8 +708,8 @@ case: ltnP => [m1_small|m1_big] //=; rewrite !inE eqxx /=; split=> //.
       apply: pc3; rewrite inE in_cons y_stack orbT /=.
       apply/existsP; exists z.
       by rewrite z_stack1 in_cons negb_or neq_zx zNstack.
-have scc_max y : y \in scc_of x -> y \in s2.
-  move=> y_sccx; apply: contraTT isT => yNs2.
+have scc_max : scc_of x \subset [set y in s2].
+  apply/subsetP=> y; rewrite inE=> y_sccx; apply: contraTT isT => yNs2.
   have xy : gconnect x y.
     by have := y_sccx; rewrite mem_scc /= => /andP[].
   have x_s2 : x \in s2 by rewrite mem_rcons mem_head.
@@ -713,30 +751,61 @@ have scc_max y : y \in scc_of x -> y \in s2.
       by rewrite 2!inE -eq_x'x => /(_ x'y'); case: colorP.
     have /(_ x') := Nbw1; rewrite (subsetP sb) => // /(_ isT).
     by move=> /pred0P /(_ y') /=; rewrite [_ \in _]x'y' /= => ->.
+have take_s : take (index x (stack e1)) (stack e1) = s.
+  rewrite s_def index_cat /= eqxx addn0.
+  rewrite (@uniq_catLR _ _ _ (x :: stack e)) -?s_def ?wf_stack_uniq //.
+  by rewrite mem_head /= ?s_def take_cat ltnn subnn take0 cats0.
+have drop_s : drop (index x (stack e1)).+1 (stack e1) = stack e.
+  rewrite s_def index_cat /= eqxx addn0.
+  rewrite (@uniq_catLR _ _ _ (x :: stack e)) -?s_def ?wf_stack_uniq //.
+  rewrite mem_head /= ?s_def drop_cat ltnNge leqW //.
+  by rewrite subSn // subnn //= drop0.
+have g1Nx : grays e1 :\ x = grays e.
+  by rewrite keep_gray grays_add_stack // setU1K // whites_graysF.
 split=> //.
 - split=> //.
-  + apply: add_sccs_wf=> //.
-    have : uniq (stack e1) by apply: wf_stack_uniq.
-    rewrite s_def => uniq_s1; rewrite index_cat.
-    rewrite (uniq_catLR uniq_s1) ?mem_cat ?mem_head ?orbT //= eqxx addn0.
-    by rewrite take_cat ltnn subnn take0 cats0.
-  + admit.
-  + move=> y; rewrite !inE => /predU1P [->|y_black]; apply/pred0P=> z /=.
-      admit.
-    have /Nbw1 /pred0P /(_ z) /= := y_black; apply: contraFF.
-    rewrite whites_add_sccs; first by rewrite inE => /and3P [-> _ ->].
-    admit.
-  + admit.
-  + admit.
-- split => //.
-  + admit.
-  + admit.
-  + admit.
+  + by apply: add_sccs_wf=> //; rewrite take_s //.
+  + split=> //; rewrite ?grays_add_sccs ?stack_add_sccs ?take_s ?drop_s// ?g1Nx.
+      exact: wf_grays_to_stack.
+      exact: wf_stack_to_grays.
+  + move=> y; rewrite !inE whites_add_sccs ?take_s //.
+    move=> /predU1P [->|/Nbw1//]; apply/pred0P=> z //=.
+    rewrite 2!inE; have /subsetP /(_ z) := succ_bVg.
+    by rewrite 2!inE => /implyP; rewrite -negb_imply orbC => ->.
+  + by rewrite grays_add_sccs ?take_s ?g1Nx.
+  + rewrite sccs_add_sccs take_s //=; apply/setP=> scc.
+    rewrite !inE blacks_add_sccs ?take_s//= black_sccs1 !inE.
+    have x_s2 : x \in [set y in s2] by rewrite inE mem_rcons mem_head.
+    have s2_gsccs : [set y in rcons s x] \in gsccs.
+       apply/imsetP => /=; exists x => //.
+      rewrite -[RHS](@def_scc _ x); last 2 first.
+      * by apply/imsetP; exists x.
+      * by rewrite !inE ?connect0.
+      apply/eqP; rewrite eqEsubset scc_max.
+      have [scc' scc'_gsccs sub'] := is_subscc_in_scc sx_subscc.
+      by rewrite (@def_scc scc') ?sub' //; apply: (subsetP sub').
+    have [scc_gsccs|] //= := boolP (scc \in gsccs); last first.
+      by apply: contraNF; rewrite orbF => /eqP->.
+    apply/idP/idP.
+      move=> /predU1P [->|].
+        apply/subsetP => y; rewrite !inE mem_rcons in_cons.
+        by case: eqP=> [->|] //= _ => /(subsetP sb).
+      by move=> /subset_trans; apply; rewrite subsetU1.
+    have [x_scc|xNscc] := boolP (x \in scc).
+      by move=> _; rewrite -(def_scc _ x_scc) // (def_scc s2_gsccs) ?eqxx.
+    rewrite -subDset (setDidPl _); first by move->; rewrite orbT.
+    by rewrite disjoint_sym (@eq_disjoint1 _ x) // => y; rewrite !inE.
 - split=> //.
-  + admit.
-  + admit.
-  + admit.
-Abort.
+  + rewrite stack_add_sccs drop_s; exists [::] => //.
+    by apply/subsetP=> y; rewrite inE.
+  + by rewrite blacks_add_sccs ?take_s// (subset_trans mo_b) ?subsetU1.
+  + by rewrite sccs_add_sccs take_s (subset_trans mo_sccs) ?subsetU1.
+- split=> //; do ?by [left].
+  + move=> y; rewrite inE => /eqP->.
+    by rewrite stack_add_sccs drop_s leqNgt rank_lt whites_stackF.
+  + move=> y; rewrite inE stack_add_sccs drop_s => /andP[_ /existsP].
+    by move=> [z /and3P[->]].
+Qed.
 
 
 (* Definition wf_stack e := *)
