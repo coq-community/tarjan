@@ -153,6 +153,10 @@ Fixpoint tarjan_rec n : {set V} -> env -> nat * env :=
   if n is n.+1 then dfs' (dfs1 (tarjan_rec n)) (tarjan_rec n)
   else fun r e => (infty, e).
 
+Let N := #|V| * #|V|.+1 + #|V|.
+Definition e0 := (Env set0 [::] set0).
+Definition tarjan := sccs (tarjan_rec N setT e0).2.
+
 (**************************************************************)
 (* Well formed environements and operations on environements. *)
 (**************************************************************)
@@ -185,9 +189,6 @@ case x_sccs : (_ \in cover _) => //=; do ?by constructor.
   by constructor=> //; rewrite /grays !inE x_black.
 by constructor; rewrite /whites !inE x_black x_stack.
 Qed.
-
-Definition e0 := (Env set0 [::] set0).
-Definition eT := (Env setT [::] gsccs).
 
 Lemma grays0 : grays e0 = set0.
 Proof. by apply/setP=> x; rewrite !inE /=. Qed.
@@ -891,9 +892,8 @@ rewrite ?modnMDl ?modn_small ?ltnS ?max_card //.
 by rewrite [X in _ < X](cardsD1 x) x_root.
 Qed.
 
-Let N := #|V| * #|V|.+1 + #|V|.
-
-Lemma tarjan_rec_is_correct : tarjan_rec N setT e0 = (infty, eT).
+Lemma tarjan_rec_is_correct :
+  tarjan_rec N setT e0 = (infty, Env setT [::] gsccs).
 Proof.
 have := @tarjan_rec_terminates N setT e0; rewrite /dfs'_correct.
 case: tarjan_rec => [m e] [].
@@ -915,8 +915,6 @@ have stacke : stack e = [::].
 congr (_, _); first by case: minfty => // [[x _ [y xy]]]; rewrite stacke.
 by case: e blackse sccse stacke {stack_wf grayse minfty} => //= *; congr Env.
 Qed.
-
-Definition tarjan := sccs (tarjan_rec N setT e0).2.
 
 Theorem tarjan_correct : tarjan = gsccs.
 Proof. by rewrite /tarjan tarjan_rec_is_correct. Qed.
