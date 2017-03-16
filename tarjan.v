@@ -887,9 +887,7 @@ move=> e1 whites_e1; apply: IHn; rewrite -ltnS (leq_trans _ n_ge) //.
 have /subset_leq_card := whites_e1.
 rewrite leq_eqVlt => /predU1P [->|lt_wh]; last first.
   by rewrite (@ltn_div2r #|V|.+1) ?divnMDl ?divn_small ?addn0 ?ltnS ?max_card.
-rewrite (@ltn_mod2r #|V|.+1) ?divnMDl ?divn_small ?addn0 ?ltnS ?max_card //=.
-rewrite ?modnMDl ?modn_small ?ltnS ?max_card //.
-by rewrite [X in _ < X](cardsD1 x) x_root.
+by rewrite ltn_add2l [X in _ < X](cardsD1 x) x_root.
 Qed.
 
 Lemma tarjan_rec_is_correct :
