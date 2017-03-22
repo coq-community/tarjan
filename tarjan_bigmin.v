@@ -592,152 +592,42 @@ Lemma connect_to (a : pred V) (g : rel V) x z :
   exists y, [/\ ~~ a y, connect g x y & connect (relto a g) y z].
 Proof.
 move=> /connectP [p gxp ->] xNa.
-pose Na := predC a; pose n := find Na (rev p).
-have [pNa|] := boolP (all a p).
-  exists x; rewrite xNa connect0; split=> //.
-  by apply/connectP; exists p; rewrite ?path_to // gxp.
-rewrite -has_predC -has_rev => pa.
-have n_lt : n < size p by rewrite -size_rev -has_find.
-have n_le : n <= size p by rewrite ltnW.
-have sp_gt0 : size p > 0 by rewrite (leq_trans _ n_lt).
-exists (nth x (rev p) n); apply/and3P; rewrite [~~ _](nth_find x pa) /=.
-have := gxp; rewrite -{1}[p](cat_take_drop (size p - n.+1).+1).
-rewrite cat_path; set g1 := take _ _; set g2 := drop _ _ => /andP [xg1 g1g2].
-have lg1 : last x g1 = nth x (rev p) n.
-  by rewrite nth_rev // last_take /= -subn_gt0 subKn.
-rewrite !(appP connectP idP) //; last by exists g1.
-exists g2; last first.
-  rewrite nth_rev // last_drop -subn_gt0 subnSK //.
-  rewrite subKn // 1?[_ <= size _]ltnW // (@set_last_default _ x) //.
-  by case: (n) => //=; rewrite subn1 nth_last.
-rewrite path_to -lg1 g1g2 /=; apply/(all_nthP x) => i i_lt.
-rewrite nth_drop.
-
-
-have i_lt_sp : i < size p.
-  by move: i_lt; rewrite size_drop subnSK // subKn // => /leq_trans->.
-have i_le := ltnW i_lt_sp.
-have := @before_find _ x Na (rev p) (size p - i.+1). 
-rewrite nth_rev subnSK ?subKn ?leq_subr /Na //=. => /negP; apply.
-
-
-
-  have [] := posnP n.
-  case: 
-
-
-(* have : last x (take (size p - n.+1) p) =  *)
-
-
-rewrite (path_connect gxp) /=; last first.
-  rewrite nth_rev //; apply/(nthP x).
-  by exists (size p - n.+1).+1; rewrite //= ltnS -subn_gt0 subKn.
-have := gxp; rewrite -{1}[p](cat_take_drop (size p - n.+1)).
-rewrite cat_path => /andP [g1 g2]; apply/connectP.
-exists (drop (size p - n.+1) p); last first.
-  rewrite last_drop /= -subn_gt0 subKn //=.
-  by rewrite !(@set_last_default _ x) ?(leq_trans _ n_small).
-rewrite path_to nth_rev //. g2.
-
-
-exists (drop (size p - n.+1) p); rewrite // nth_rev // last_take //=.
-  
- (path_connect gxp) /=; last first.
-  rewrite nth_rev //; apply/(nthP x).
-  by exists (size p - n.+1).+1; rewrite //= ltnS -subn_gt0 subKn.
-
-apply/connectP; exists (drop (size p - n.+1) p); last first.
-  rewrite last_drop /= -subn_gt0 subKn //=.
-  by rewrite !(@set_last_default _ x) ?(leq_trans _ n_small).
-rewrite path_to nth_rev //.
-  
-
-
- !(appP connectP idP) //=.
-
-
-exists (nth x (rev p) n); apply/and3P.
-rewrite (appP connectP idP); last first.
-  exists (rev (take n (rev p))).
-  apply/(pathP x) => i.
-  rewrite size_rev size_trale.
-  rewrite -rev_path /=.
-
-have [pNa|] := boolP (all a p).
-  exists x; rewrite xNa connect0; split=> //.
-  by apply/connectP; exists p; rewrite ?path_to // gxp.
-rewrite -has_predC -has_rev => pa; exists (nth x (rev p) n); apply/and3P.
-have n_small : n < size p by rewrite -size_rev -has_find.
-rewrite [~~ _](nth_find x pa) /= !(appP connectP idP) //=.
-  
-
-
- !nth_rev //.
-  
-have := (nth_find x pa).
-have xpa : has Na (x :: p) by apply/hasP; exists (last x p); rewrite ?mem_last.
+pose P := [pred i | let y := nth x (x :: p) i in
+  [&& connect g x y & connect (relto a g) y (last x p)]].
+have [] := @ex_minnP P.
+  by exists (size p); rewrite /= nth_last (path_connect gxp) //= mem_last.
+move=> i /= /andP[g1 g2] i_min; exists (nth x (x :: p) i); split=> //.
+case: i => [|i] //= in g1 g2 i_min *; have i_lt : i < size p.
+  by rewrite i_min // !nth_last /= (path_connect gxp) //= mem_last.
+have := i_min i; rewrite ltnn => /contraNF /(_ isT); apply: contraFN => axpi.
+rewrite (connect_trans _ g2) ?andbT //; last first.
+  by rewrite connect1 //= [_ \in _]axpi /= (pathP x _).
+by rewrite (path_connect gxp) //= mem_nth //= ltnW.
+Qed.
 
 Lemma connect_from (a : pred V) (g : rel V) x z :
   connect g x z -> z \notin a ->
   exists y, [/\ y \notin a, connect (relfrom a g) x y & connect g y z].
 Proof.
-move=> /connectP [p path_xp ->] zNs.
-pose Na := [pred x | x \notin a]; pose n := find Na (x :: p).
-have xpa : has Na (x :: p) by apply/hasP; exists (last x p); rewrite ?mem_last.
-have n_small : n < size (x :: p) by rewrite -has_find.
-exists (nth x (x :: p) n); apply/and3P; rewrite [~~ _](nth_find x xpa) /=.
-move: path_xp; rewrite -{1}[p](cat_take_drop n.+1) cat_path => /andP[].
-rewrite last_take /=. n_small .=> g1 g2; rewrite !(appP connectP idP) //=.
-
- 
-have := nth_find x xpa; rewrite -/n /Na /=.
-
-exists (nth x p n); apply/and3P; rewrite [_ \notin a](@nth_find _ _ Na) //=.
-
-have /= /orP[xNa|pNs] : has Ns (x :: p).
-- by apply/hasP; exists (last x p); rewrite ?mem_last.
-- by exists x; rewrite xNa connect0 (path_connect path_xp) /= ?mem_last.
-
-have n_small : n < size (x :: p) by rewrite -has_find.
-exists (nth x p n); apply/and3P; rewrite [_ \notin a](@nth_find _ _ Ns) //=.
-move: path_xp; rewrite -{1}[p](cat_take_drop n.+1) cat_path => /andP[].
-rewrite last_take /= n_small => g1 g2; rewrite !(appP connectP idP) //=.
-  exists (drop n.+1 p); rewrite ?last_drop ?n_small //=.
-  rewrite ltn_neqAle n_small -!nth_last; case: (altP eqP) => [<-|] //=.
-  by move=> _; apply/set_nth_default; rewrite prednK // (leq_trans _ n_small).
-exists (take n.+1 p); rewrite ?last_take ?n_small ?path_from ?g1 //=.
-apply/allP=> y /= /(nthP x) [i]; rewrite size_belast => i_lt <-.
-rewrite nth_belast_small //.
-have := @before_find _ x Ns p i. 
-
-
-
-
-pose Ns := [pred x | x \notin s]; pose n := find Ns p.
-do [have /= /orP[/negPf->//|pNs] : has Ns (x :: p)] in xs *.
-  by apply/hasP; exists (last x p); rewrite ?mem_last.
-have n_small : n < size p by rewrite -has_find.
-exists (nth x (x :: p) n), (nth x p n); apply/and5P.
-rewrite [_ \notin s](@nth_find _ _ Ns) ?(pathP _ _) //=.
-have := path_xp; rewrite -{1 5}[p](cat_take_drop n) (drop_nth x) ?cat_path //=.
-move=> /and3P [gx1 gx2 gx3].
-rewrite [connect g _ _](appP connectP idP) ?andbT /=; last first.
-  by exists (drop n.+1 p) => //; rewrite -cat_rcons last_cat last_rcons.
-have [->/=|n_gt0] := posnP n; first by rewrite xs connect0.
-rewrite -[n]prednK//= [X in X && _]negbFE //=; last first.
-  by apply: (@before_find _ _ Ns); rewrite prednK.
-apply/connectP; exists (take n p); last first.
-  by rewrite (last_nth x) size_take n_small -[n]prednK /= ?nth_take ?prednK.
-apply/(pathP x)=> i itnp /=; rewrite (pathP x _) // andbT.
-have := itnp; rewrite size_take n_small => iltn.
-rewrite nth_take // -[_ && _]negbK negb_and.
-rewrite [X in _ || X](@before_find _ _ Ns) // orbF.
-case: i => [|i] in iltn {itnp} *; first by rewrite /= xs.
-by rewrite /= nth_take 1?ltnW // [X in ~~ X](@before_find _ _ Ns) //= ltnW.
+rewrite connect_rev => cgxz za; have [y []]//= := connect_to cgxz za.
+by exists y; split; rewrite // connect_rev.
 Qed.
 
+Lemma connect1l (g : rel V) x z :
+  connect g x z -> z != x -> exists2 y, g x y & connect g y z.
+Proof.
+move=> /connectP [[|y p] //= xyp ->]; first by rewrite eqxx.
+by move: xyp=> /andP[]; exists y => //; apply/connectP; exists p.
+Qed.
 
-Notation wedge e := (from (pred_of_set (whites e)) edge).
+Lemma connect1r (g : rel V) x z :
+  connect g x z -> z != x -> exists2 y, connect g x y & g y z.
+Proof.
+move=> xz zNx; move: xz; rewrite connect_rev => /connect1l.
+by rewrite eq_sym => /(_ zNx) [y]; exists y; rewrite // connect_rev.
+Qed.
+
+Notation wedge e := (relfrom (pred_of_set (whites e)) edge).
 Definition wreach e x := [set y in connect (wedge e) x].
 
 Lemma mem_wreach e x : x \in wreach e x.
@@ -970,8 +860,29 @@ have split_wreach : \bigcup_(y in roots) wreach e y =
   apply/bigcupP/bigcupP=> - [] z z_roots zy; exists z => //; last first.
     rewrite !inE in zy *; apply: connect_sub zy => u v /= /andP [uw uv].
     by rewrite connect1 //= uv andbT; apply: subsetP uw; rewrite subenv_whites.
-  move: zy Nxy; rewrite !inE => /connectP [p ezp ->{y}].
-  move: ezp; rewrite path_wedge => /andP [zp pw].
+  apply: contraTT isT => zNy; move: zy.
+  rewrite !inE => /connect_from /(_ Nxy) [y' [zNy']] zy' y'z.
+  move: zy' => /connect1r [|x' /= zx' /and3P [zx'1 x'w x'y']].
+    apply: contraNneq zNy' => eq_y'z.
+    rewrite eq_y'z !inE in y'z *.
+
+
+  rewrite (@eq_connect _ _ (wedge e1)); last first.
+    move=> u v /=; rewrite whites1 !inE.
+  (* rewrite !inE in zNy'. *)
+
+  rewrite (@eq_connect _ _ (wedge e1)); last first.
+    move=> u v /=; rewrite whites1 in_setD.
+
+    move=> zy'; move: zNy'. rewrite !inE zy'.
+  move=> u v /=; rewrite whites1 in_setD.
+
+  move: zy Nxy; rewrite !inE => /connect_from -/(_ (pred_of_set (wreach e1 z))).
+  case.
+
+ => /connectP [p ezp ->{y}].
+
+  move: ezp; rewrite path_from => /andP [zp pw].
   have [pw1|] := boolP (all [pred y | y \in whites e1] (belast z p)).
     by move=> _; apply/connectP; exists p => //; rewrite path_wedge zp.
   rewrite -has_predC => pNw.
