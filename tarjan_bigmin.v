@@ -147,8 +147,7 @@ Definition dfs' dfs1 dfs' (roots : {set V}) e :=
   if [pick x in roots] isn't Some x then (infty, e)
   else let roots' := roots :\ x in
        let: (m1, e1) :=
-         if x \in stack e then (rank x (stack e), e)
-         else if x \in blacks e then (infty, e)
+         if [|| x \in stack e | x \in blacks e] then (rank x (stack e), e)
          else dfs1 x e in
        let: (m2, e2) := dfs' roots' e1 in (minn m1 m2, e2).
 
@@ -705,61 +704,40 @@ move=> x_root; have := dfs'_is_correct _ x_root; rewrite /dfs'_correct.
 move=> dfsrec'_correct pre.
 have [to_roots e_wf e_gwf Nbw black_sccs] := pre.
 have e_uniq := @wf_uniq _ e_wf.
-case: ifPn=> [x_stack|xNstack].
+case: ifPn=> [x_sVb|xNsVb].
   move: dfsrec'_correct => /(_ _ (subxx _)); case: (dfsrec' _ _) => [m2 e1].
   case; first exact: (pre_dfs_subroots (subD1set _ _)).
   move=> change_color [[e1_wf e1_gwf Nbw1 sccs_e1]
        [sube1] toNwhite m2_min].
   have [//|s1 s1_def sb] := subenv_stackP _ sube1.
   have := wf_uniq e1_wf.
-  have x_se1: x \in stack e1 by rewrite s1_def mem_cat x_stack orbT.
   split=> //.
   - rewrite -(setD1K x_root) subUset change_color sub1set !inE.
-    have [//|xNblack /=] := boolP (x \in blacks _).
-      by rewrite graysE !inE s1_def mem_cat x_stack orbT !andbT.
+    case: color3P => // /(subsetP (subenv_whites sube1)).
+    by case: color4P x_sVb.
   split=> //.
   - rewrite -(setD1K x_root) big_setU1 ?setD11 //=.
-    rewrite -setDDl toNwhite Nwreach ?stack_whitesF //.
+    rewrite -setDDl toNwhite Nwreach; last by case: color4P x_sVb.
     rewrite [whites e :\ _](setDidPl _) //.
     apply/pred0P=> y //=; rewrite inE andbC.
-    by case: eqP => //->; rewrite stack_whitesF. (* to simplify *)
+    by case: eqP => //->; case: color4P x_sVb. (* to simplify *)
   - rewrite -(setD1K x_root) big_setU1 ?setD11 // bigmin_setU /= m2_min.
-    congr (minn _ _); rewrite Nwreach ?stack_whitesF //.
-    by rewrite big_set1 ord_rank // s1_def rank_catl.
-case: ifPn=> [x_black|xNblack] //=.
-  have x_sccs : x \in cover (sccs e) by case: color4P x_black xNstack.
-  move: dfsrec'_correct => /(_ _ (subxx _)); case: (dfsrec' _ _) => [m2 e1].
-  case; first exact: (pre_dfs_subroots (subD1set _ _)).
-  move=> change_color [[e1_wf e1_gwf Nbw' sccs'_black]
-                       [sube1] toNwhite m2_min].
-  have e1_uniq := @wf_uniq _ e1_wf.
-  have [//|s1 s1_def sb] := subenv_stackP _ sube1.
-  split=> //.
-    rewrite -(setD1K x_root) subUset change_color sub1set !inE.
-    by rewrite (subsetP (subenv_blacks sube1)). (* Anomaly if sube1 is _ *)
-  split=> //.
-  - rewrite -(setD1K x_root) big_setU1 ?setD11 //=.
-    rewrite -setDDl toNwhite Nwreach ?blacks_whitesF //.
-    rewrite [whites e :\ _](setDidPl _) //.
-    apply/pred0P=> y //=; rewrite inE andbC.
-    by case: eqP => //->; rewrite blacks_whitesF. (* to simplify *)
-  - rewrite -(setD1K x_root) big_setU1 ?setD11 // bigmin_setU /= m2_min.
-    congr (minn _ _); rewrite Nwreach ?blacks_whitesF //.
-    rewrite big_set1 ord_rank // rank_infty // sccs_stackF //.
-    by apply: subsetP x_sccs; rewrite subset_cover ?subenv_sccs.
+    congr (minn _ _); rewrite Nwreach; last by case: color4P x_sVb.
+    rewrite big_set1 ord_rank // s1_def.
+    case: (boolP (_ \in stack e)) x_sVb => /= [/rank_catl->|xNs x_black] //.
+    rewrite !rank_infty // -s1_def; case: color4P xNs x_black => //.
+    by move=> /(subsetP (subset_cover (subenv_sccs sube1))); case: color4P.
 have := dfs1_is_correct _ x_root; rewrite /dfs1_correct.
 case: (dfs1 _ _) => [m1 e1] post_dfs1.
 move: dfsrec'_correct => /(_ e1).
-case: (dfsrec' _ _) => [m2 e2] post_dfs'.
-move=> {dfs1_is_correct dfs'_is_correct}.
-have x_white : x \in whites e by case: color4P xNstack xNblack.
+case: (dfsrec' _ _) => [m2 e2] post_dfs' {dfs1_is_correct dfs'_is_correct}.
+have x_white : x \in whites e by case: color4P xNsVb.
 have := post_dfs1 x_white (pre_dfs_subroots _ pre).
 rewrite sub1set x_root => /(_ isT) {post_dfs1}.
-case=> [x_black [[e1_wf e1_gwf Nbw1 sccs_e1]
-        sube1 newwhites1 m1_min]].
+case=> [x_black [[e1_wf e1_gwf Nbw1 sccs_e1] sube1 whites1 m1_min]].
 have [//|s1 s1_def s1b] := subenv_stackP _ sube1.
-rewrite big_set1 in newwhites1.
 have e1_uniq := wf_uniq e1_wf.
+rewrite big_set1 in whites1 m1_min.
 case: post_dfs'.
 - by rewrite subenv_whites.
 - split=> // y z; rewrite graysE !inE s1_def mem_cat.
@@ -767,8 +745,7 @@ case: post_dfs'.
   move=> /andP[_ z_roots]; rewrite to_roots // graysE !inE.
   rewrite ys andbT; apply: contraNN yNb; apply/subsetP.
   by rewrite subenv_blacks.
-move=> rootsDx_subset [[e2_wf e2_gwf Nbw2 sccs_e2]
-  sube2 newwhites2 m2_min].
+move=> rootsDx_subset [[e2_wf e2_gwf Nbw2 sccs_e2] sube2 whites2 m2_min].
 have [//|s2 s2_def s2b] := subenv_stackP _ sube2.
 have e2_uniq := wf_uniq e2_wf.
 have split_wreach : \bigcup_(y in roots) wreach e y =
@@ -781,7 +758,7 @@ have split_wreach : \bigcup_(y in roots) wreach e y =
   have [->|neq_yz] := altP (y =P z); first by rewrite mem_wreach.
   have [|notout] := pickP [pred t |
     [&& t \notin whites e1, y \in wreach e t  & t \in wreach e1 z]].
-    move=> t /= /and3P []; rewrite newwhites1 inE negb_and negbK.
+    move=> t /= /and3P []; rewrite whites1 inE negb_and negbK.
     move=> /orP [xt ty _|tNw].
       by rewrite !inE /= in Nxy xt ty; rewrite (connect_trans xt) in Nxy.
     by rewrite Nwreach // inE => /eqP->.
@@ -796,13 +773,13 @@ split.
   rewrite -(setD1K x_root) subUset rootsDx_subset andbT sub1set.
   by rewrite inE (subsetP (subenv_blacks sube2)).
 split => //; first exact: subenv_trans sube2.
-- by rewrite newwhites2 newwhites1 split_wreach setDDl.
-- rewrite m1_min m2_min big_set1 split_wreach bigmin_setU /=.
+- by rewrite whites2 whites1 split_wreach setDDl.
+- rewrite m1_min m2_min split_wreach bigmin_setU /=.
   congr (minn (val _) _); apply: eq_bigr => y xy; apply/val_inj=> /=.
   rewrite !ord_rank //.
   have /orP[ys|ysccs] : (y \in stack e1) || (y \in cover (sccs e1)).
   + suff: y \notin whites e1 by case: color4P.
-    by rewrite newwhites1 inE xy.
+    by rewrite whites1 inE xy.
   + by rewrite s2_def rank_catl.
   + rewrite !rank_infty ?sccs_stackF //.
     by apply: subsetP ysccs; rewrite subset_cover ?subenv_sccs.
@@ -824,7 +801,7 @@ case: post_dfs' => //=.
   move=> y z; rewrite grays_add_stack // => /setU1P [->|y_gray];
     rewrite inE => /(@connect1 _ edge) //.
   by apply/connect_trans/access_to_x; rewrite ?set11.
-move=> succ_bVg [[e1_wf e1_gwf Nbw1 black_sccs1] sube1 newwhites m_min].
+move=> succ_bVg [[e1_wf e1_gwf Nbw1 black_sccs1] sube1 whites1 m_min].
 have [//|s s_def sb] := subenv_stackP _ sube1.
 set s2 := rcons s x.
 have e1_uniq := @wf_uniq _ e1_wf.
@@ -938,7 +915,7 @@ case: ltnP => [m1_small|m1_big] //=; rewrite !inE eqxx /=; split=> //.
     + by rewrite -[sccs e]/(sccs (add_stack x e)) subenv_sccs.
     + apply/'exists_eqP/uniq_ex_drop; rewrite // s_def /=.
       by exists (rcons s x); rewrite cat_rcons.
-  - rewrite whites_add_blacks big_set1 wreachex newwhites whites_add_stack.
+  - rewrite whites_add_blacks big_set1 wreachex whites1 whites_add_stack.
     by rewrite !setDDl setUA setUAC setUid.
   - by rewrite m2_min; congr val; apply: eq_bigl=> y; rewrite /= big_set1.
 move: m2_min; rewrite (minn_idPl _) // /m rkx => rkx_min.
@@ -1036,7 +1013,7 @@ split=> //.
   rewrite (subset_trans (subenv_sccs sube1)) ?subsetUr //=.
   by apply/'exists_eqP; exists ord0; rewrite drop0.
 - rewrite whites_add_sccs ?take_s ?sb //.
-  by rewrite newwhites whites_add_stack big_set1 wreachex setDDl.
+  by rewrite whites1 whites_add_stack big_set1 wreachex setDDl.
 - rewrite big_set1 /= drop_s; apply/eqP; rewrite eqn_leq leq_ord andbT.
   rewrite -[#|V|]/(val ord_max); apply/bigmin_geqP => y /= /rkx_le.
   apply: contraTT; rewrite -!ltnNge ord_rank// rank_lt // => y_stack.
