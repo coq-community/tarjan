@@ -166,14 +166,14 @@ have /= /andP[H _] := Uxp'.
 by apply: contraNneq H => <-.
 Qed.
 
-(* Canonical element in a list : find the first element of p.1
-   that is equivalent to x walking only in p.2 *)
-Definition can_to x p := nth x p.2 (find (diconnect (relto p.1 r) x) p.2).
+(* Canonical element in a list : find the first element of l
+   that is equivalent to x walking only that satisfies a *)
+Definition can_to x a l := nth x l (find (diconnect (relto a r) x) l).
 
-Local Notation "C[ x ]_ p" := (can_to x p) 
-  (at level 9, format "C[ x ]_ p").
+Local Notation "C[ x ]_( a , l ) " := (can_to x a l) 
+  (at level 9, format "C[ x ]_( a ,  l )").
 
-Lemma eq_can_to x a b l :  a =1 b -> C[x]_(a, l) = C[x]_(b, l).
+Lemma eq_can_to x a b l : a =1 b -> C[x]_(a, l) = C[x]_(b, l).
 Proof.
 move=> aEb; rewrite /can_to /=.
 congr (nth _ _ _).
@@ -181,10 +181,10 @@ apply: eq_find => y.
 by apply: eq_diconnect_to.
 Qed.
 
-Lemma mem_can_to x p : x \in p.2 -> C[x]_p \in p.2.
+Lemma mem_can_to x a l : x \in l -> C[x]_(a, l) \in l.
 Proof.
 move=> xIp1; rewrite /can_to.
-by case: (leqP (size p.2) (find (diconnect (relto p.1 r) x) p.2)) => H1;
+by case: (leqP (size l) (find (diconnect (relto a r) x) l)) => H1;
   [rewrite nth_default | rewrite mem_nth].
 Qed.
 
@@ -209,8 +209,11 @@ Qed.
 (* x occurs before y in l *)
 Definition before l x y  := index x l <= index y l.
 
+Local Notation "x =[ l ]< y" := (before l x y) 
+  (at level 10, format "x  =[ l ]<  y").
+
 Lemma before_filter_inv a x y l (l1 := [seq i <- l | a i]) :
-  x \in l1 -> y \in l1 -> before l1 x y -> before l x y.
+  x \in l1 -> y \in l1 -> x =[l1]< y -> x =[l]< y.
 Proof.
 rewrite {}/l1 /before; elim: l => //= z l IH.
 case E : (a z) => /=.
@@ -224,7 +227,7 @@ by apply: IH.
 Qed.
 
 Lemma before_filter x y l a (l1 := [seq i <- l | a i]) :
-  x \in l1 -> before l x y -> before l1 x y.
+  x \in l1 -> x =[l]< y -> x =[l1]< y.
 Proof.
 rewrite {}/l1 /before; elim: l => //= z l IH.
 case E : (a z) => /=.
@@ -249,7 +252,7 @@ by rewrite nth_index ?nth_find // mem_nth // -has_find.
 Qed.
 
 Lemma before_can_to x y a l : 
-  x \in l -> y \in l -> x =[a]= y -> before l C[x]_(a, l) y.
+  x \in l -> y \in l -> x =[a]= y -> C[x]_(a, l) =[l]< y.
 Proof.
 move=> Hx Hy; rewrite diconnect_sym => Hr.
 have F : has (diconnect (relto a r) x) l.
@@ -260,7 +263,7 @@ by rewrite nth_index // diconnect_sym Hr.
 Qed.
 
 Lemma before_can_toW x a b l : 
-  x \in l -> b \subset a -> before l C[x]_(a, l) C[x]_(b, l).
+  x \in l -> b \subset a -> C[x]_(a, l) =[l]< C[x]_(b, l).
 Proof.
 move=> xIl Hs.
 have Hs1 : has (diconnect (relto a r) x) l.
@@ -291,91 +294,110 @@ Local Notation "x =[]= y" := (diconnect r x y)
 Local Notation "x =[ a ]= y" := (diconnect (rel_of_simpl_rel (relto a r)) x y) 
   (at level 10, format "x  =[ a ]=  y").
 
-Local Notation "C[ x ]_ p" := (can_to r x p) 
-  (at level 9, format "C[ x ]_ p").
+Local Notation "C[ x ]_( a , l )" := (can_to r x a l) 
+  (at level 9, format "C[ x ]_( a ,  l )").
 
-(* well formed list : connected elements are inside and
-                      canonical elements are on top *)
-Definition wf_to (p : (pred T) * seq T) := 
-  p.2 \subset p.1 /\
- forall x y , 
-   x \in p.2 -> x -[p.1]-> y -> y \in p.2 /\ before p.2 C[x]_p y.
+Local Notation "x =[ l ]< y" := (before l x y) 
+  (at level 10, format "x  =[ l ]<  y").
 
-Local Notation "W_[ s ] l" := (wf_to (s, l)) 
-  (at level 10, format "W_[ s ]  l").
-Local Notation "W_[] l " := (wf_to (predT,l)) 
-  (at level 10, format "W_[]  l").
+(* The list l is topogically sorted with respect to a if
+      all elements of l respects a
+   and
+      the list is closed under connection with respect to a
+   and
+      canonical elements are before their connected elements 
+*)
+Definition tsorted (a : pred T) (l : seq T) := 
+ [/\ l \subset a,
+     forall x y, x \in l -> x -[a]-> y -> y \in l &
+     forall x y, x \in l -> x -[a]-> y -> C[x]_(a, l) =[l]< y
+ ].
 
-Lemma eq_wf_to a b l : a =1 b -> W_[a] l -> W_[b] l.
+Local Notation " TS[ a , l ]" := (tsorted a l) 
+  (at level 10, format "TS[ a ,  l ]").
+Local Notation "TS[ l ] " := (tsorted predT l) 
+  (at level 10, format "TS[ l ]").
+
+Lemma tsortedE a l :
+ l \subset a ->
+ (forall x y, x \in l -> x -[a]-> y -> y \in l /\  C[x]_(a, l) =[l]< y) ->
+ TS[a, l].
 Proof.
-move=> aEb [/= lSa Ca]; split => /= [|x y xIl xCy].
-  apply: subset_trans lSa _.
-  by apply/subsetP=> i; rewrite -!topredE /= aEb.
-rewrite -(eq_can_to _ _ _ aEb) //.
-apply: Ca => //.
-rewrite (eq_connect (_ : _ =2 relto b r)) // => x1 y1.
-by rewrite /= -topredE /= aEb.
+by move=> lSa HR; split => // x y xIl xCy; have [] := HR _ _ xIl xCy.
 Qed.
 
-Lemma wf_to_nil a : W_[a] [::].
+Lemma eq_tsorted a b l : a =1 b -> TS[a, l] -> TS[b , l].
+Proof.
+move=> aEb [/= lSa Ca Ba].
+have aE2b : relto a r =2 relto b r by move=> x y; rewrite /= -topredE /= aEb.
+split => /= [|x y xIl xCy|x y xIl xCy].
+- apply: subset_trans lSa _.
+  by apply/subsetP=> i; rewrite -!topredE /= aEb.
+- by apply: Ca xIl _; rewrite (eq_connect aE2b).
+rewrite -(eq_can_to _ _ _ aEb).
+by apply: Ba xIl _; rewrite (eq_connect aE2b).
+Qed.
+
+Lemma tsorted_nil a : TS[a, [::]].
 Proof. by split=> //; apply/subsetP => x. Qed.
 
-(* Removing the equivalent element on top preserves well-formedness *)
-Lemma wf_to_inv x a l : 
-  W_[a] (x :: l) -> W_[a] [seq y <- x :: l | ~~ x =[a]= y].
+(* Removing the equivalent element on top preserves the sorting *)
+Lemma tsorted_inv x a l : 
+  TS[a, x :: l] -> TS[a, [seq y <- x :: l | ~~ x =[a]= y]].
 Proof.
-move=> [ xlSa HR]; split => [|y z].
-  rewrite /= diconnect0 /=.
+move=> [xlSa CR BR]; split => [|y z|y z].
+- rewrite /= diconnect0 /=.
   apply/(subset_trans _ xlSa)/subsetP=> z /=.
   by rewrite !inE orbC mem_filter => /andP[_ ->].
-rewrite !mem_filter => /andP[NxDy yIxl] yCz.
+- rewrite !mem_filter => /andP[xNDy yIxl] yCz.
+  apply/andP; split; last by apply: CR yCz.
+  apply: contra xNDy => xDz.
+  have : C[y]_(a, x :: l) =[x :: l]< x.
+    apply: BR yIxl (connect_trans yCz _).
+    by case/andP: xDz.
+  rewrite /before index_head /=; case: eqP => // -> _.
+  by apply: diconnect_can_to.
+rewrite !mem_filter => /andP[xNDy yIxl] yCz.
 have ->: C[y]_(a, [seq i <- x :: l | ~~ x =[a]= i]) = C[y]_(a, x :: l).
   elim: (x :: l) => //= t l1 IH.
   case : (boolP (_ =[_]= _)) => Ext /=; last first.
     by rewrite /can_to /=; case : (boolP (_ =[_]= _)).
   rewrite IH  /can_to /=.
   case : (boolP (_ =[_]= _)) => Eyt //=.
-  by case/negP: NxDy; apply: diconnect_trans Ext _; rewrite diconnect_sym.
-have yIl : y \in l. 
-  by move: yIxl NxDy; rewrite inE => /orP[/eqP->|//]; rewrite diconnect0.
-have [zIxl Rz] := HR y z yIxl yCz.
-have F : ~~ x =[a]= z.
-  apply: contra NxDy => NxDz.
-  have/HR[//|_] : y -[a]-> x.
-    by apply: connect_trans yCz _; case/andP: NxDz.
-  rewrite /before index_head /=.
-  by case: eqP => //-> _; apply: diconnect_can_to.
-rewrite F; split => //.
-apply: before_filter => //.
+  by case/negP: xNDy; apply: diconnect_trans Ext _; rewrite diconnect_sym.
+apply: before_filter; last by apply: BR.
 rewrite mem_filter mem_can_to // ?andbT.
-apply: contra NxDy => NxRc.
-by apply: diconnect_trans NxRc (diconnect_can_to _ _ _).
+apply: contra xNDy => xDc.
+by apply: diconnect_trans xDc (diconnect_can_to _ _ _).
 Qed.
 
 (* Computing the connected elements for the reversed graph gives
-   the equivalent class of the top element of an well_formed list *)
-Lemma wf_to_diconnect x y a l : 
-  W_[a] (x :: l) -> x =[a]= y = (y \in x :: l) && y -[a]-> x.
+   the equivalent class of the top element of a tologically sorted list *)
+Lemma tsorted_diconnect x y a l : 
+  TS[a, x :: l] -> x =[a]= y = (y \in x :: l) && y -[a]-> x.
 Proof.
-move=> [_ HR].
+move=> [_ CR BR].
 apply/idP/idP=> [/andP[Cxy Cyx]|/andP[yIxl Cyx]].
-  case: (HR x y) => // [|->]; first by rewrite inE eqxx.
-  by rewrite Cyx.
+  by rewrite (CR x y) // inE eqxx.
 have F := diconnect_can_to _ _ yIxl.
-case: (HR y x) => // _.
+have := BR y x yIxl Cyx.
 by rewrite /before /= eqxx; case: eqP => //->.
 Qed.
 
-(* Computing well_formed list by concatenation *)
-Lemma wf_to_cat a l1 l2 (b : pred T := [predD a & [pred x in l1]]) : 
-  W_[a] l1 -> W_[b] l2 -> W_[a] (l2 ++ l1).
+(* Computing topological sort by concatenation *)
+Lemma tsorted_cat a l1 l2 : 
+  TS[a, l1] -> TS[[predD a & [pred x in l1]], l2] -> TS[a, l2 ++ l1].
 Proof.
-move=> [l1Sa Rl1] [l2Sb Rl2]; split => [|x y] /=.
-  apply/subsetP => z; rewrite mem_cat => /orP[/(subsetP l2Sb)|/(subsetP l1Sa) //].
+set b := [predD _ & _].
+move=> [l1Sa Cl1 Bl1] [l2Sb Cl2] Bl2.
+apply: tsortedE => [|x y].
+  apply/subsetP => z.
+  rewrite mem_cat => /orP[/(subsetP l2Sb)|/(subsetP l1Sa) //].
   by rewrite inE => /andP[].
 have [xIl2 _ Hc|xNIl2] := boolP (x \in l2); last first.
   rewrite mem_cat (negPf xNIl2) /= => xIl1 Cxy.
-  have /Rl1 - /(_ _ Cxy)[yIl1 Bxy] := xIl1.
+  have yIl1 := Cl1 _ _ xIl1 Cxy.
+  have xBy := Bl1 _ _ xIl1 Cxy.
   split; first by rewrite mem_cat yIl1 orbT.
   rewrite /before [index y _]index_cat.
   have [yIl2|yNil2] := boolP (y \in l2).
@@ -392,7 +414,7 @@ have [xIl2 _ Hc|xNIl2] := boolP (x \in l2); last first.
 have [/forallP F|] :=
      boolP [forall z, [&& z != x, x -[a]-> z & z -[a]-> y] ==> 
                    (z \notin l1)].
-  have /(Rl2 _ _ xIl2) [yIl2 HB] : x -[b]-> y.
+  have xCy : x -[b]-> y.
     have /eq_connect-> : 
       relto [predD a & [pred x in l1]] r =2
       relto [predC [pred x in l1]]  (relto a r).
@@ -401,15 +423,18 @@ have [/forallP F|] :=
     rewrite !inE /=.
     have /implyP->// := F z.
     by rewrite zDx xCz.
+  have yIl2 := Cl2 _ _ xIl2 xCy.
+  have xBy := Bl2 _ _ xIl2 xCy.
   split; first by rewrite mem_cat yIl2.
   rewrite /before [index y _]index_cat yIl2.
-  apply: leq_trans HB.
+  apply: leq_trans xBy.
   rewrite can_to_cat // index_cat mem_can_to //.
   apply: before_can_toW=> //; apply/subsetP=> i.
   by rewrite !inE => /andP[].
 rewrite negb_forall => /existsP[z].
 rewrite negb_imply -!andbA negbK => /and4P[zDx xCz zCy zIl1].
-have [yIl1 HB] := Rl1 _ _ zIl1 zCy.
+have yIl1 := Cl1 _ _ zIl1 zCy.
+have zBy := Bl1 _ _ zIl1 zCy.
 split; first by rewrite mem_cat yIl1 orbT.
 rewrite /before [index y _]index_cat.
 have [yIl2|_] := boolP (_ \in _).
@@ -425,15 +450,17 @@ by rewrite inE orbC => ->.
 Qed.
 
 (* Elements that are notin l do not matter *)
-Lemma wf_to_setU1_l x a l (b : pred T := [predD1 a & x]) :
-   x \notin l ->  W_[a] l -> W_[b] l.
+Lemma tsorted_setU1_l x a l (b : pred T := [predD1 a & x]) :
+   x \notin l -> TS[a, l] -> TS[b, l].
 Proof.
-move=> xNIl [lSa H]; split => /= [|t z tIl tCz].
+move=> xNIl [lSa Cl Bl]; apply: tsortedE => /= [|t z tIl tCz].
   apply/subsetP=> i; rewrite !inE.
   by case: eqP => //= [-> /(negP xNIl)//|_ /(subsetP lSa)].
-case: (H t z) => //= [|zIl Btz].
+have tC'z : t -[a]-> z.
   apply: connect_to_sub tCz.
   by apply/subsetP => i /andP[].
+have zIl := Cl _ _ tIl tC'z.
+have tBz := Bl _ _ tIl tC'z.
 split => //; suff->: C[t]_(b, l) = C[t]_(a, l) by [].
 congr nth; apply: eq_in_find => y /= yIl.
 have [xIa|xNIa] := boolP (x \in a); last first.
@@ -442,28 +469,28 @@ have [xIa|xNIa] := boolP (x \in a); last first.
 apply/idP/idP => /=. 
   apply/diconnect_to_sub/subsetP=> u.
   by rewrite !inE => /andP[].
-case/andP=> Cty Cyt.
+case/andP=> tCy Cyt.
 have /eq_diconnect-> : relto b r =2 relto (predC1 x) (relto a r).
   by move=> x1 y1; rewrite /b /= !inE !andbA.
 by apply/andP; split; apply: connect_to_C1l => //; 
-   apply: contra xNIl => /H[].
+   apply: contra xNIl=> /Cl->.
 Qed.
 
-(* Computing well_formed list by adding a top element *)
-Lemma wf_to_cons_r x a l (b : pred T := [predD1 a & x]) :
+(* Computing topologically sorted list by adding a top element *)
+Lemma tsorted_cons_r x a l (b : pred T := [predD1 a & x]) :
  (forall y, y \in l -> x -[a]-> y) ->
  (forall y, r x y -> a y -> y != x -> y \in l) ->
-  a x -> W_[b] l ->  W_[a] (x :: l).
+  a x -> TS[b, l] ->  TS[a, x :: l].
 Proof.
-move=> AxC AyIl Ax [/= lSb Hl]; split => [|y z] /=.
+move=> AxC AyIl Ax [/= lSb Cl Bl]; apply: tsortedE => [|y z] /=.
   apply/subsetP=> y; rewrite inE => /orP[/eqP->//|/(subsetP lSb)].
   by rewrite inE=> /andP[].
 have F t : t != x -> x -[b]-> t -> t \in l.
   move=> tDx /connectP[[_ /eqP|v p]] /=; first by rewrite (negPf tDx).
   rewrite -!andbA /= => /and4P[vDx vIa xRv Pbrvp tLvp].
-  have: v \in l.
+  have/Cl->// : v \in l.
     by apply: AyIl => //; rewrite inE.
-  by case/(Hl v t) => //; apply/connectP; exists p.
+  by apply/connectP; exists p.
 rewrite inE.
 have Hr : relto b r =2 (relto (predC1 x) (relto a r)).
   by move=> x1 y1; rewrite /= !inE !andbA.
@@ -473,7 +500,8 @@ have [/eqP-> /= _ xCz|yDx /= yIl yCz] := boolP (y == x).
   rewrite inE (F z) ?orbT // 1?eq_sym // (eq_connect Hr).
   by rewrite -connect_to_C1_id.
 have [yCz'|yNCz'] := boolP (y -[b]-> z).
-  have [zIxs Byz] := Hl _ _ yIl yCz'.
+  have zIxs := Cl _ _ yIl yCz'.
+  have yBz := Bl _ _ yIl yCz'.
   split; first by rewrite inE zIxs orbT.
   have [/eqP xEz|xDz] := boolP (x == z).
     rewrite can_to_cons.
@@ -483,7 +511,7 @@ have [yCz'|yNCz'] := boolP (y -[b]-> z).
   rewrite can_to_cons; case: (_ =[_]= _); first by rewrite /before /= eqxx.
   rewrite /before /= (negPf xDz); case: eqP => //= _.
   rewrite ltnS.
-  apply: leq_trans Byz => /=.
+  apply: leq_trans yBz => /=.
   apply: before_can_toW => //; apply/subsetP=> i.
   by rewrite inE => /andP[].
 have [yCx|yNCx] := boolP (y -[a]-> x); last first.
@@ -518,8 +546,10 @@ Local Notation "x =[ l ]= y" := (diconnect (relto l r) x y)
   (at level 10, format "x  =[ l ]=  y").
 Local Notation "x =[]= y" := (diconnect r x y) 
   (at level 10, format "x  =[]=  y").
-Local Notation "W_[ l1 ] l2 " := (wf_to r (l1, l2)) (at level 10).
-Local Notation "W_[] l" := (wf_to r (pred_of_simpl predT, l)) (at level 10).
+Local Notation "TS[ a , l ]" := (tsorted r a l) 
+  (at level 10, format "TS[ a ,  l ]").
+Local Notation "TS[ l ]" := (tsorted r (pred_of_simpl predT) l) 
+  (at level 10, format "TS[ l ]").
 
 Section Pdfs.
 
@@ -540,14 +570,13 @@ Lemma pdfs_correct (p : {set T} * seq T) x :
   uniq l /\  {subset l <= ~: s} ->
   let p1 := pdfs (rgraph r) p x in
   let (s1, l1) := p1 in
-  let ps : pred T := [pred x in s] in
   if x \notin s then p1 = p else
        [/\ #|s1| <= #|s| & uniq l1]
     /\
        exists l2 : seq T,
        [/\ x \in l2, s1 = s :\: [set y in l2], l1 = l2 ++ l, 
-           W_[ps] l2 &
-           forall y, y \in l2 -> x -[ps]-> y].
+           TS[[pred x in s], l2] &
+           forall y, y \in l2 -> x -[[pred x in s]]-> y].
 Proof.
 rewrite /pdfs.
 have: #|p.1| <= #|T| by apply/subset_leq_card/subsetP=> i.
@@ -556,18 +585,21 @@ elim: #|T| x p => /= [x [s l]|n IH x [s l]]/=.
   by rewrite inE.
 have [xIs Hl [HUl HS]/=|xNIs Hl [HUl HS]//] := boolP (x \in s).
 set p := (_, l); set F := rpdfs _ _; set L := rgraph _ _.
-pose ps := pred_of_simpl [predD1 s & x].
 have: 
      [/\ #|p.1| < #|s| & uniq p.2]
   /\
      exists l2,
-      [/\  x \notin p.1, p.1 = (s :\ x) :\: [set z in l2], p.2 = l2 ++ l, W_[ps] l2 &
-          forall y, y \in l2 -> x -[ps]-> y].
+      [/\  
+           x \notin p.1, 
+           p.1 = (s :\ x) :\: [set z in l2], 
+           p.2 = l2 ++ l, TS[[predD1 s & x], l2] &
+           forall y, y \in l2 -> x -[[predD1 s & x]]-> y
+      ].
   split; [split => // | exists [::]; split => //=].
   - by rewrite /p /= [#|s|](cardsD1 x) xIs.
   - by rewrite !inE eqxx.
   - by rewrite setD0.
-  by exact: wf_to_nil.
+  by exact: tsorted_nil.
 have: forall y, r x y -> (y \notin p.1) || (y \in L).
   by move=> y; rewrite [_ \in rgraph _ _]rgraphK orbC => ->.
 have: forall y, (y \in L) -> r x y.
@@ -588,8 +620,9 @@ elim: L (_, _) => /=
   - by rewrite inE eqxx.
   - by apply/setP => z; rewrite s1E !inE negb_or andbC andbAC.
   - by rewrite l1E.
-  - apply: wf_to_cons_r => // [y yInl2|y /yIp].
-    rewrite connect_to_C1_id (eq_connect (_ : _ =2 (relto ps r))) ?xCy //.
+  - apply: tsorted_cons_r => // [y yInl2|y /yIp].
+    rewrite connect_to_C1_id
+           (eq_connect (_ : _ =2 (relto [predD1 s & x] r))) ?xCy //.
       by move=> x1 y1; rewrite /= !inE andbA.
     rewrite orbF s1E 3!inE negb_and => /orP[]; first by rewrite negbK.
     by rewrite !inE negb_and => /orP[] /negPf->.
@@ -623,14 +656,14 @@ split; [split=> //= | exists (l4 ++ l2); split => //= [||||z]].
 - by rewrite s3E s1E !inE eqxx !andbF.
 - by apply/setP => i; rewrite s3E s1E !inE mem_cat negb_or -!andbA.
 - by rewrite l3E l1E catA.
-- apply: wf_to_cat => //.
-  apply: eq_wf_to Rwl4 => i.
+- apply: tsorted_cat => //.
+  apply: eq_tsorted Rwl4 => i.
   by rewrite /= s1E !inE.
 rewrite mem_cat => /orP[] zIl4; last by apply: xCy.
 apply: connect_trans (_: y -[_]-> z); last first.
   apply: connect_to_sub (Cyz _ zIl4); apply/subsetP => i.
   by rewrite /= s1E !inE => /andP[].
-apply: connect_to1 (Rx _ _); rewrite /ps !inE ?eqxx //.
+apply: connect_to1 (Rx _ _); rewrite !inE ?eqxx //.
 by move: yIs1; rewrite s1E !inE=> /and3P[_ ->].
 Qed.
 
@@ -660,17 +693,17 @@ Qed.
 Definition stack :=
   (foldl (pdfs (rgraph r)) (setT, [::]) (enum T)).2.
 
-(* The stack is well-formed and contains all the nodes *)
-Lemma stack_correct : W_[] stack /\ forall x, x \in stack.
+(* The stack is topologically sorted and contains all the nodes *)
+Lemma stack_correct : TS[stack] /\ forall x, x \in stack.
 Proof.
 suff: [/\
         {subset (setT : {set T}, [::]).2  <= stack},
-        W_[] stack &
+        TS[stack] &
          forall x : T, x \in (enum T) ->  x \in stack].
   case=> H1 H2 H3; split => // x.
   by rewrite H3 // mem_enum.
 rewrite /stack; set F := foldl _; set p := (_, _).
-have : W_[] p.2 by apply: wf_to_nil.
+have : TS[p.2] by apply: tsorted_nil.
 have: p.1 = ~: [set x in p.2].
   by apply/setP=> i; rewrite /= !inE.
 have: uniq p.2 by [].
@@ -689,8 +722,8 @@ have [yIs1|yNIs1] := boolP (y \in s1); last first.
 case: pdfs => s2 l2 /= [[Ss1s2 Ul2] [l3 [yIl3 s2E l2E RWl3 Cyz]]].
 case: (IH (s2, l2)) => //= [|| Sl2F RwF FI]. 
 - by apply/setP=> i; rewrite s2E Hi l2E !inE mem_cat negb_or.
-- rewrite l2E; apply: (wf_to_cat Rw).
-  apply: eq_wf_to RWl3 => i.
+- rewrite l2E; apply: (tsorted_cat Rw).
+  apply: eq_tsorted RWl3 => i.
   by rewrite /= Hi !inE andbT.
 split=> // [i iIl1|x]; first by rewrite Sl2F // l2E mem_cat iIl1 orbT.
 rewrite inE => /orP[/eqP->|//]; last exact: FI.
@@ -700,7 +733,7 @@ Qed.
 Lemma connect_to_rev l a b x y : 
      {subset b <= a} -> 
      (forall z, (z \in b) = (z \in x :: l)) ->
-     W_[a] (x :: l) ->
+     TS[a, x :: l] ->
      ((y \in x :: l) && y -[a]-> x) = (connect (relto b [rel x y | r y x]) x y).
 Proof.
 move=> /subsetP HS HD HW.
@@ -762,7 +795,7 @@ have: forall c, c \in p.2 ->
                 exists x, c =i (diconnect (relto predT r) x) by [].
 have: ~: p.1 =i flatten p.2.
  by move=> i; rewrite !inE in_nil.
-have: wf_to r (predT : pred T, [seq i <- stack r | i \in p.1]).
+have: tsorted r (predT : pred T) [seq i <- stack r | i \in p.1].
   have->: [seq i <- stack r | i \in p.1] = stack r.
     by apply/all_filterP/allP=> y; rewrite inE.
   by case: (stack_correct r).
@@ -781,19 +814,19 @@ move: HR; rewrite /= xIs1; set L := [seq _ <- _ | _] => HR.
 have l2R : l2 =i (diconnect r x).
   move=> y.
   rewrite xCy -(@connect_to_rev r L setT) //.
-  - rewrite -wf_to_diconnect //.
+  - rewrite -tsorted_diconnect //.
       rewrite -topredE /=.
       by apply: eq_diconnect => i j; rewrite /= !inE.
-    by apply: eq_wf_to HR => i; rewrite  !inE //= topredE inE.
+    by apply: eq_tsorted HR => i; rewrite  !inE //= topredE inE.
   - move=> i; rewrite /= !inE mem_filter.
     have := HFI i; rewrite /= mem_cat -HI /= !inE.
     case: (_ =P _) => [->|] /=; first by rewrite xIs1.
     by case: (_ \in _).
- by apply: eq_wf_to HR => i; rewrite // inE topredE inE.
+ by apply: eq_tsorted HR => i; rewrite // inE topredE inE.
 apply: IH => [|i|i|i|] //=.
 - suff->: [seq i <- l | i \in s2] =
           [seq i <- x :: L | ~~ diconnect r x i].
-    by apply: wf_to_inv.
+    by apply: tsorted_inv.
   rewrite /= diconnect0 /=.
   rewrite -filter_predI.
   apply: eq_filter => y /=.
