@@ -531,6 +531,44 @@ rewrite /diconnect yCx /=.
 by apply: AxC.
 Qed.
 
+Lemma connect_to_rev l a b x y : 
+     {subset b <= a} -> 
+     (forall z, (z \in b) = (z \in x :: l)) ->
+     TS[a, x :: l] ->
+     ((y \in x :: l) && y -[a]-> x) = (connect (relto b [rel x y | r y x]) x y).
+Proof.
+move=> /subsetP HS HD HW.
+have xIxl : x \in x :: l by rewrite inE eqxx.
+case: (x =P y) => [<-|/eqP xDy]; first by rewrite xIxl !connect0.
+have [yIxl/=|yNIxl/=] := boolP (y \in _); last first.
+  apply/sym_equal/idP/negP; apply: contra yNIxl => /connectP[[/= _ ->//|z p]].
+  rewrite path_to /= => /and3P[_ zB /allP ApB ->].
+  have := mem_last z p.
+  by rewrite -HD inE => /orP[/eqP->//|/ApB].
+have [yCx|yNCx] := boolP (y -[_]-> x); last first.
+apply/sym_equal/idP/negP; apply: contra yNCx => xCy.
+  have /connectP[p Hp Hy] := connect_to_from xCy.
+  apply/connectP; exists p => //.
+  move: Hp; rewrite /= path_from path_to => /andP[->].
+  case: p Hy => // z p1.
+  rewrite {3}lastI /= all_rcons => <- /= /andP[_ /allP Ap].
+  rewrite [a x](subsetP HS) ?HD //.
+  by apply/allP=> i /Ap iB; rewrite [a _](subsetP HS).
+apply/sym_equal/idP.
+have /connect_to_from/connectP[p Hp Hy] : y -[b]-> x.
+  rewrite (eq_connect (_ : _ =2 (relto b (relto a r)))); last first.
+    move=> x1 y1 /=.
+    by case: (boolP (_ \in b)) => // /(subsetP HS)->.
+  apply: connect_to_forced => // z zDy yCz zCx.
+  rewrite [b _]HD.
+  by have [_ /(_ y z yIxl yCz)[]] := HW.
+apply/connectP; exists p => //.
+move: Hp; rewrite /= path_from path_to => /andP[->].
+case: p Hy => // z p1.
+rewrite {3}lastI /= /= all_rcons => <- /= /andP[_ Ap].
+by rewrite  [b _]HD yIxl.
+Qed.
+
 End ConnectRelto.
 
 Section Stack.
@@ -730,43 +768,6 @@ rewrite inE => /orP[/eqP->|//]; last exact: FI.
 by apply: Sl2F; rewrite l2E mem_cat yIl3.
 Qed.
 
-Lemma connect_to_rev l a b x y : 
-     {subset b <= a} -> 
-     (forall z, (z \in b) = (z \in x :: l)) ->
-     TS[a, x :: l] ->
-     ((y \in x :: l) && y -[a]-> x) = (connect (relto b [rel x y | r y x]) x y).
-Proof.
-move=> /subsetP HS HD HW.
-have xIxl : x \in x :: l by rewrite inE eqxx.
-case: (x =P y) => [<-|/eqP xDy]; first by rewrite xIxl !connect0.
-have [yIxl/=|yNIxl/=] := boolP (y \in _); last first.
-  apply/sym_equal/idP/negP; apply: contra yNIxl => /connectP[[/= _ ->//|z p]].
-  rewrite path_to /= => /and3P[_ zB /allP ApB ->].
-  have := mem_last z p.
-  by rewrite -HD inE => /orP[/eqP->//|/ApB].
-have [yCx|yNCx] := boolP (y -[_]-> x); last first.
-apply/sym_equal/idP/negP; apply: contra yNCx => xCy.
-  have /connectP[p Hp Hy] := connect_to_from xCy.
-  apply/connectP; exists p => //.
-  move: Hp; rewrite /= path_from path_to => /andP[->].
-  case: p Hy => // z p1.
-  rewrite {3}lastI /= all_rcons => <- /= /andP[_ /allP Ap].
-  rewrite [a x](subsetP HS) ?HD //.
-  by apply/allP=> i /Ap iB; rewrite [a _](subsetP HS).
-apply/sym_equal/idP.
-have /connect_to_from/connectP[p Hp Hy] : y -[b]-> x.
-  rewrite (eq_connect (_ : _ =2 (relto b (relto a r)))); last first.
-    move=> x1 y1 /=.
-    by case: (boolP (_ \in b)) => // /(subsetP HS)->.
-  apply: connect_to_forced => // z zDy yCz zCx.
-  rewrite [b _]HD.
-  by have [_ /(_ y z yIxl yCz)[]] := HW.
-apply/connectP; exists p => //.
-move: Hp; rewrite /= path_from path_to => /andP[->].
-case: p Hy => // z p1.
-rewrite {3}lastI /= /= all_rcons => <- /= /andP[_ Ap].
-by rewrite  [b _]HD yIxl.
-Qed.
 
 End Stack.
 
