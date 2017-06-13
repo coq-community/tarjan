@@ -727,20 +727,20 @@ rewrite l1E cats0.
 by have [_ /(_ x y xIl2 H)[]] := WH.
 Qed.
 
-(* Building the stack of all nodes *)
-Definition stack :=
+(* Building the topologically-ordered sequence of all nodes *)
+Definition tseq :=
   (foldl (pdfs (rgraph r)) (setT, [::]) (enum T)).2.
 
-(* The stack is topologically sorted and contains all the nodes *)
-Lemma stack_correct : TS[stack] /\ forall x, x \in stack.
+(* The sequence is topologically sorted and contains all the nodes *)
+Lemma tseq_correct : TS[tseq] /\ forall x, x \in tseq.
 Proof.
 suff: [/\
-        {subset (setT : {set T}, [::]).2  <= stack},
-        TS[stack] &
-         forall x : T, x \in (enum T) ->  x \in stack].
+        {subset (setT : {set T}, [::]).2  <= tseq},
+        TS[tseq] &
+         forall x : T, x \in (enum T) ->  x \in tseq].
   case=> H1 H2 H3; split => // x.
   by rewrite H3 // mem_enum.
-rewrite /stack; set F := foldl _; set p := (_, _).
+rewrite /tseq; set F := foldl _; set p := (_, _).
 have : TS[p.2] by apply: tsorted_nil.
 have: p.1 = ~: [set x in p.2].
   by apply/setP=> i; rewrite /= !inE.
@@ -777,7 +777,7 @@ Definition kosaraju :=
   let f := pdfs (rgraph [rel x y | r y x]) in 
   (foldl  (fun (p : {set T} * seq (seq T)) x => if x \notin p.1 then p else 
                       let p1 := f (p.1, [::]) x in  (p1.1, p1.2 :: p.2))
-          (setT, [::]) (stack r)).2.
+          (setT, [::]) (tseq r)).2.
 
 Lemma kosaraju_correct :
     let l := flatten kosaraju in 
@@ -790,17 +790,17 @@ set f := pdfs (rgraph [rel x y | r y x]).
 set g := fun p x => if _ then _ else _.
 set p := (_, _).
 have: uniq (flatten p.2) by [].
-have: forall c, c \in (flatten p.2) ++ (stack r).
-  by move=>c; case: (stack_correct r) => _ /(_ c).
+have: forall c, c \in (flatten p.2) ++ (tseq r).
+  by move=>c; case: (tseq_correct r) => _ /(_ c).
 have: forall c, c \in p.2 -> 
                 exists x, c =i (diconnect (relto predT r) x) by [].
 have: ~: p.1 =i flatten p.2.
  by move=> i; rewrite !inE in_nil.
-have: tsorted r (predT : pred T) [seq i <- stack r | i \in p.1].
-  have->: [seq i <- stack r | i \in p.1] = stack r.
+have: tsorted r (predT : pred T) [seq i <- tseq r | i \in p.1].
+  have->: [seq i <- tseq r | i \in p.1] = tseq r.
     by apply/all_filterP/allP=> y; rewrite inE.
-  by case: (stack_correct r).
-elim: stack p => [[s l]/= HR HI HE HFI HUF|].
+  by case: (tseq_correct r).
+elim: tseq p => [[s l]/= HR HI HE HFI HUF|].
   split=> // i.
   by have := HFI i; rewrite cats0.
 move=> x l IH [s1 l1] HR HI HE HFI HUF.
@@ -849,7 +849,7 @@ End Kosaraju.
 
 Print rpdfs.
 Print pdfs.
-Print stack.
+Print tseq.
 Print kosaraju.
 Print dfs.
 

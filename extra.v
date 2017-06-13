@@ -97,10 +97,8 @@ End extra_fintype.
 Section extra_path.
 Variable (V : finType).
 
-Definition relto (a : pred V) (g : rel V) : rel V := 
-   [rel x y | (y \in a) && g x y].
-Definition relfrom (a : pred V) (g : rel V) : rel V := 
-   [rel x y | (x \in a) && g x y].
+Definition relto (a : pred V) (g : rel V) := [rel x y | (y \in a) && g x y].
+Definition relfrom (a : pred V) (g : rel V) := [rel x y | (x \in a) && g x y].
 
 Lemma connect_rev (g : rel V) :
   connect g =2 (fun x => connect (fun x => g^~ x) ^~ x).
