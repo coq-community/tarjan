@@ -561,7 +561,7 @@ have /connect_to_from/connectP[p Hp Hy] : y -[b]-> x.
     by case: (boolP (_ \in b)) => // /(subsetP HS)->.
   apply: connect_to_forced => // z zDy yCz zCx.
   rewrite [b _]HD.
-  by have [_ /(_ y z yIxl yCz)[]] := HW.
+  by have [_ /(_ y z yIxl yCz)] := HW.
 apply/connectP; exists p => //.
 move: Hp; rewrite /= path_from path_to => /andP[->].
 case: p Hy => // z p1.
@@ -679,7 +679,7 @@ apply: IH1 => [z zIl|z Rxz /=|]; first by apply: Rx; rewrite inE zIl orbT.
   case: (boolP (y \in s1)) Hv =>
        [yIs1/= [[Ss1s3 Ul3] [l4 [yIl4 s3E l3E Rwl4 Cyz]]]
        |yNIs1/= [-> _]]; last first. 
-    case: (yIp _ Rxz) => /orP[->//|].
+    case/orP: (yIp _ Rxz) => [->//|].
     by rewrite inE => /orP[/eqP->|->]; [rewrite yNIs1|rewrite orbT].
   rewrite s3E !inE !negb_and.
   case/orP: (yIp _ Rxz) => [->//|]; first by rewrite orbT.
@@ -724,7 +724,7 @@ split => // [||y].
 apply/idP/idP => [|H].
   by rewrite l1E cats0; exact: Cy.
 rewrite l1E cats0.
-by have [_ /(_ x y xIl2 H)[]] := WH.
+by have [_ /(_ x y xIl2 H)] := WH.
 Qed.
 
 (* Building the topologically-ordered sequence of all nodes *)
