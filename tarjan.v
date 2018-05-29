@@ -68,19 +68,19 @@ Notation infty := #|V|.
 (* Connected components of the graph, abstractly *)
 (*************************************************)
 
-Notation gbiconnect := [rel x y | gconnect x y && gconnect y x].
+Notation gsymconnect := [rel x y | gconnect x y && gconnect y x].
 
-Lemma gbiconnect_equiv : equivalence_rel gbiconnect.
+Lemma gsymconnect_equiv : equivalence_rel gsymconnect.
 Proof.
-split; first by rewrite /gbiconnect /= connect0.
-move=> /andP [xy yx]; rewrite /gbiconnect /=.
+split; first by rewrite /gsymconnect /= connect0.
+move=> /andP [xy yx]; rewrite /gsymconnect /=.
 by apply/idP/idP => /andP [/(connect_trans _)-> // /connect_trans->].
 Qed.
 
-Definition gsccs := equivalence_partition gbiconnect setT.
+Definition gsccs := equivalence_partition gsymconnect setT.
 
 Lemma gsccs_partition : partition gsccs setT.
-Proof. by apply: equivalence_partitionP => ?*; apply: gbiconnect_equiv. Qed.
+Proof. by apply: equivalence_partitionP => ?*; apply: gsymconnect_equiv. Qed.
 
 Definition cover_gsccs := cover_partition gsccs_partition.
 
@@ -90,9 +90,9 @@ Hint Resolve trivIset_gsccs.
 
 Notation scc_of := (pblock gsccs).
 
-Lemma mem_scc x y : x \in scc_of y = gbiconnect y x.
+Lemma mem_scc x y : x \in scc_of y = gsymconnect y x.
 Proof.
-by rewrite pblock_equivalence_partition // => ?*; apply: gbiconnect_equiv.
+by rewrite pblock_equivalence_partition // => ?*; apply: gsymconnect_equiv.
 Qed.
 
 Definition def_scc scc x := @def_pblock _ _ scc x trivIset_gsccs.
