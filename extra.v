@@ -124,7 +124,7 @@ Proof. by rewrite -rev_path path_to all_rev rev_path. Qed.
 
 
 Lemma connect_to (a : pred V) (g : rel V) x z : connect g x z ->
-  exists y , [/\ (y \in a) ==> (x == y) && (x \in a),
+  exists y, [/\ (y \in a) ==> (x == y) && (x \in a),
                  connect g x y & connect (relto a g) y z].
 Proof.
 move=> /connectP [p gxp ->].

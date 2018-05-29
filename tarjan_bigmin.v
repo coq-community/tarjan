@@ -638,7 +638,7 @@ have split_wreach : \bigcup_(y in roots) wreach e y =
   move: zt; rewrite (@eq_connect _ _ (wedge e1)); last first.
     by move=> u v /=; rewrite !inE /= whites1 !inE andbA.
   case: (altP eqP) xtxy => /= [<-|neq_yt]; first by rewrite (negPf Nzy).
-  by rewrite implybF negbK=> /connect_trans /(_ ty); rewrite (negPf Nxy).
+  by rewrite implybF negbK => /connect_trans /(_ ty); rewrite (negPf Nxy).
 split => //; first exact: subenv_trans sube2.
   by rewrite whites2 whites1 split_wreach setDDl.
 rewrite m1_min m2_min split_wreach bigmin_setU /=.
