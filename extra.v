@@ -103,10 +103,8 @@ Definition relfrom (a : pred V) (g : rel V) := [rel x y | (x \in a) && g x y].
 Lemma connect_rev (g : rel V) :
   connect g =2 (fun x => connect (fun x => g^~ x) ^~ x).
 Proof.
-move=> x y; apply/connectP/connectP=> [] [p gp ->].
-  exists (rev (belast x p)); rewrite ?rev_path //.
-  by case: (lastP p) => //= ??; rewrite belast_rcons rev_cons last_rcons.
-exists (rev (belast y p)); rewrite ?rev_path //.
+move=> x y; apply/connectP/connectP=> [] [p gp ->];
+[exists (rev (belast x p))|exists (rev (belast y p))]; rewrite ?rev_path //;
 by case: (lastP p) => //= ??; rewrite belast_rcons rev_cons last_rcons.
 Qed.
 
@@ -165,4 +163,149 @@ move=> xz zNx; move: xz; rewrite connect_rev => /connect1l.
 by rewrite eq_sym => /(_ zNx) [y]; exists y; rewrite // connect_rev.
 Qed.
 
+Section Diconnect.
+
+Variable r : rel V.
+
+(* x is diconnected to y *)
+Definition diconnect x y  :=  connect r x y && connect r y x.
+
+Lemma diconnect0 : reflexive diconnect.
+Proof. by move=> x; apply/andP. Qed.
+
+Lemma diconnect_sym : symmetric diconnect.
+Proof. by move=> x y; apply/andP/andP=> [] []. Qed.
+
+Lemma diconnect_trans : transitive diconnect.
+Proof.
+move=> x y z /andP[Cyx Cxy] /andP[Cxz Czx].
+by rewrite /diconnect (connect_trans Cyx) ?(connect_trans Czx).
+Qed.
+Hint Resolve diconnect0 diconnect_sym diconnect_trans.
+
+Lemma diconnect_equiv : equivalence_rel diconnect.
+Proof. by apply/equivalence_relP; split; last apply/sym_left_transitive. Qed.
+
+(*************************************************)
+(* Connected components of the graph, abstractly *)
+(*************************************************)
+
+Definition sccs := equivalence_partition diconnect setT.
+
+Lemma sccs_partition : partition sccs setT.
+Proof. by apply: equivalence_partitionP => ?*; apply: diconnect_equiv. Qed.
+
+Definition cover_sccs := cover_partition sccs_partition.
+
+Lemma trivIset_sccs : trivIset sccs.
+Proof. by case/and3P: sccs_partition. Qed.
+Hint Resolve trivIset_sccs.
+
+Notation scc_of := (pblock sccs).
+
+Lemma mem_scc x y : x \in scc_of y = diconnect y x.
+Proof.
+by rewrite pblock_equivalence_partition // => ?*; apply: diconnect_equiv.
+Qed.
+
+Definition def_scc scc x := @def_pblock _ _ scc x trivIset_sccs.
+
+Definition is_subscc (A : {set V}) := A != set0 /\
+                                      {in A &, forall x y, connect r x y}.
+
+Lemma is_subscc_in_scc (A : {set V}) :
+  is_subscc A -> exists2 scc, scc \in sccs & A \subset scc.
+Proof.
+move=> []; have [->|[x xA]] := set_0Vmem A; first by rewrite eqxx.
+move=> AN0 A_sub; exists (scc_of x); first by rewrite pblock_mem ?cover_sccs.
+by apply/subsetP => y yA; rewrite mem_scc /diconnect !A_sub.
+Qed.
+
+Lemma is_subscc1 x (A : {set V}) : x \in A ->
+  (forall y, y \in A -> connect r x y /\ connect r y x) -> is_subscc A.
+Proof.
+move=> xA AP; split; first by apply: contraTneq xA => ->; rewrite inE.
+by move=> y z /AP [xy yx] /AP [xz zx]; rewrite (connect_trans yx).
+Qed.
+
+End Diconnect.
+
+Lemma eq_diconnect r1 r2 : r1 =2 r2 -> diconnect r1 =2 diconnect r2.
+Proof.
+by move=> r1Er2 x y; rewrite /diconnect !(eq_connect r1Er2).
+Qed.
+
+Section Relto.
+
+Variable r : rel V.
+
+Local Notation "x -[]-> y" :=
+  (connect r x y) (at level 10, format "x  -[]->  y") .
+
+Local Notation connect_to s :=  (connect (rel_of_simpl_rel (relto s r))).
+
+Local Notation "x -[ s ]-> y" := (connect_to s x y)
+  (at level 10, format "x  -[ s ]->  y").
+
+Local Notation "x =[]= y" := (diconnect r x y) 
+  (at level 10, format "x  =[]=  y").
+
+Local Notation diconnect_to a := (diconnect (rel_of_simpl_rel (relto a r))).
+
+Local Notation "x =[ a ]= y" := (diconnect (rel_of_simpl_rel (relto a r)) x y) 
+  (at level 10, format "x  =[ a ]=  y").
+
+Lemma connect_to1 (a : pred V) x y : y \in a -> r x y -> x -[a]-> y.
+Proof. by move=> ay Rxy; rewrite connect1 //= ay. Qed.
+
+Lemma sub_connect_to (a b : pred V) : 
+  a \subset b -> subrel (connect_to a) (connect_to b).
+Proof.
+move=> /subsetP sub_ab; apply: connect_sub => x y.
+by move=> /andP[/sub_ab ??]; apply: connect_to1.
+Qed.
+
+Lemma connect_toW a : subrel (connect_to a) (connect r).
+Proof. by apply/(@sub_connect_to _ predT)/subsetP. Qed.
+
+Lemma sub_diconnect_to (a b : pred V) : 
+  a \subset b -> subrel (diconnect_to a) (diconnect_to b).
+Proof. 
+by move=> subab ?? /andP[??]; rewrite /diconnect !(sub_connect_to subab).
+Qed.
+
+Lemma eq_diconnect_to (a b : pred V) x y : a =i b -> x =[a]= y = x =[b]= y.
+Proof. by move=> eq_ab; apply: eq_diconnect=> x1 y1; rewrite /= eq_ab. Qed.
+
+Lemma reltoT : relto predT r = r :> rel _. Proof. by []. Qed.
+
+Lemma connect_to_forced (a : pred V) x y :
+ (forall z, z != x -> x -[]-> z ->  z -[]-> y -> a z) ->
+  x -[]-> y ->  x -[a]-> y.
+Proof.
+move=> Hf /connectP[p {p}/shortenP[p Hp Up _ Hy]].
+apply/connectP.
+elim: p {-2 4}x Hy Up Hp (connect0 (relto a r) x) =>
+   [z /=-> _ _ Hz| z p IH /= z1 Hy /and3P[H1 H2 H3] /andP[Rxy Pp] Hz1].
+  by exists [::].
+move: H1; rewrite inE negb_or => /andP[xDz H1].
+have Az : a z.
+  apply: Hf; first by rewrite eq_sym.
+    apply: connect_trans (connect_toW Hz1) (connect1 Rxy).
+    by apply/connectP; exists p.
+have Raz : x -[a]-> z.
+ by apply: connect_trans Hz1 (connect_to1 Az Rxy).
+have Uxp : uniq (x :: p) by rewrite /= H1.
+have [p1 H1p1 H2p1] := IH _ Hy Uxp Pp Raz.
+by exists (z :: p1); rewrite //= [_ \in _]Az Rxy.
+Qed.
+
+Lemma reltoI a b : relto (predI a b) r =2 relto a (relto b r).
+Proof. by move=> x y; rewrite /= andbA. Qed.
+
+End Relto.
+
 End extra_path.
+
+
+

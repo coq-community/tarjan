@@ -13,132 +13,25 @@ Implicit Types l : seq T.
 Implicit Types A B C : pred T.
 Implicit Types x y z : T.
 
-Lemma connect_rev (V : finType) (g : rel V) (x y : V) :
-  connect g x y -> connect [rel x y | g y x] y x.
-Proof.
-move=> /connectP[p Pxp ->].
-elim: p x Pxp => // z p IH x /=/andP[xGy /IH sCz].
-by apply: connect_trans sCz (connect1 _).
-Qed.
-
-Section Diconnect.
-
-Variable r : rel T.
-Local Notation "x -[]-> y" := 
-  (connect r x y) (at level 10, format "x  -[]->  y") .
-
-(* x is diconnected to y *)
-Definition diconnect x y  :=  connect r x y && connect r y x.
-
-Local Notation "x =[]= y" := (diconnect x y) 
-  (at level 10, format "x  =[]=  y").
-
-Lemma diconnect0 : reflexive diconnect.
-Proof. by move=> x; apply/andP. Qed.
-
-Lemma diconnect_sym : symmetric diconnect.
-Proof. by move=> x y; apply/andP/andP=> [] []. Qed.
-
-Lemma diconnect_trans : transitive diconnect.
-Proof.
-move=> x y z /andP[Cyx Cxy] /andP[Cxz Czx].
-by rewrite /diconnect (connect_trans Cyx) ?(connect_trans Czx).
-Qed.
-
-End Diconnect.
-
-Lemma eq_diconnect r1 r2 : r1 =2 r2 -> diconnect r1 =2 diconnect r2.
-Proof.
-by move=> r1Er2 x y; rewrite /diconnect !(eq_connect r1Er2).
-Qed.
-
 Section Relto.
 
 Variable r : rel T.
 
-Local Notation "x -[ s ]-> y" := 
-  (connect (rel_of_simpl_rel (relto s r)) x y)
-  (at level 10, format "x  -[ s ]->  y").
-
-Local Notation "x -[]-> y" := 
+Local Notation "x -[]-> y" :=
   (connect r x y) (at level 10, format "x  -[]->  y") .
+
+Local Notation connect_to s :=  (connect (rel_of_simpl_rel (relto s r))).
+
+Local Notation "x -[ s ]-> y" := (connect_to s x y)
+  (at level 10, format "x  -[ s ]->  y").
 
 Local Notation "x =[]= y" := (diconnect r x y) 
   (at level 10, format "x  =[]=  y").
 
-Lemma connect_to_from  a x y :
-  x -[a]-> y -> connect (relfrom a [rel x y | r y x]) y x.
-Proof.
-move => /connect_rev.
-by apply: connect_sub => x1 y1 H; apply: connect1 .
-Qed.
-
-Lemma connect_from_to  a x y :
-  connect (relfrom a r) x y -> connect (relto a [rel x y | r y x]) y x.
-Proof.
-move => /connect_rev.
-by apply: connect_sub => x1 y1 H; apply: connect1 .
-Qed.
-
-Lemma connect_to1 (a : pred T) x y : a y -> r x y -> x -[a]-> y.
-Proof. by move=> ay Rxy; apply: connect1; rewrite /= [_ \in _]ay. Qed.
-
-Lemma connect_toW a: 
-  subrel (connect (relto a r)) (connect r).
-Proof. by apply: connect_sub => x y /andP[_ H]; apply: connect1. Qed.
-
-Lemma connect_to_sub (a b : pred T) x y : 
- a \subset b -> x -[a]-> y -> x -[b]-> y.
-Proof.
-move=> /subsetP Hs.
-apply/connect_sub => x1 y1 /= /andP[y1Ia x1Ry1].
-by apply: connect_to1 (Hs _ _) _.
-Qed.
+Local Notation diconnect_to a := (diconnect (rel_of_simpl_rel (relto a r))).
 
 Local Notation "x =[ a ]= y" := (diconnect (rel_of_simpl_rel (relto a r)) x y) 
   (at level 10, format "x  =[ a ]=  y").
-
-Lemma diconnect_to_sub (a b : pred T) x y : 
-  a \subset b -> x =[a]= y -> x =[b]= y.
-Proof. 
-by move=> Hs /andP[Cxy Cyx]; rewrite /diconnect !(connect_to_sub Hs).
-Qed.
-
-Lemma eq_diconnect_to (a b : pred T) x y :  a =1 b -> x =[a]= y = x =[b]= y.
-Proof.
-move=> aEb; apply: eq_diconnect=> x1 y1.
-by rewrite /= -!topredE /= aEb.
-Qed.
-
-Lemma diconnect_to_predT :  diconnect (relto predT r) =2 diconnect r.
-Proof. by move=> x y. Qed.
- 
-Lemma connect_toT :  (connect (relto predT r)) =2 (connect r).
-Proof. by []. Qed.
-
-Lemma connect_to_forced (a : pred T) x y :
- (forall z, z != x -> x -[]-> z ->  z -[]-> y -> a z) ->
-  x -[]-> y ->  x -[a]-> y.
-Proof.
-move=> Hf /connectP[p {p}/shortenP[p Hp Up _ Hy]].
-apply/connectP.
-elim: p {-2 4}x Hy Up Hp (connect0 (relto a r) x) =>
-   [z /=-> _ _ Hz| z p IH /= z1 Hy /and3P[H1 H2 H3] /andP[Rxy Pp] Hz1].
-  by exists [::].
-move: H1; rewrite inE negb_or => /andP[xDz H1].
-have Az : a z.
-  apply: Hf; first by rewrite eq_sym.
-    apply: connect_trans (connect_toW Hz1) (connect1 Rxy).
-    by apply/connectP; exists p.
-have Raz : x -[a]-> z.
- by apply: connect_trans Hz1 (connect_to1 Az Rxy).
-have Uxp : uniq (x :: p) by rewrite /= H1.
-have [p1 H1p1 H2p1] := IH _ Hy Uxp Pp Raz.
-by exists (z :: p1); rewrite //= [_ \in _]Az Rxy.
-Qed.
-
-Lemma reltoI a b : relto (predI a b) r =2 relto a (relto b r).
-Proof. by move=> x y; rewrite /= andbA. Qed.
 
 Lemma connect_to_C1r x y z :
   ~~ z -[]-> y ->  x -[]-> y -> x -[predC1 z]-> y.
@@ -272,7 +165,7 @@ have Hs2 : has (diconnect (relto b r) x) l.
   by apply/hasP; exists x => //; exact: diconnect0.
 rewrite /before /can_to !index_find //.
 apply: sub_find => z.
-by apply: diconnect_to_sub.
+by apply: sub_diconnect_to.
 Qed.
 
 End Relto.
@@ -457,7 +350,7 @@ move=> xNIl [lSa Cl Bl]; apply: tsortedE => /= [|t z tIl tCz].
   apply/subsetP=> i; rewrite !inE.
   by case: eqP => //= [-> /(negP xNIl)//|_ /(subsetP lSa)].
 have tC'z : t -[a]-> z.
-  apply: connect_to_sub tCz.
+  apply: sub_connect_to tCz.
   by apply/subsetP => i /andP[].
 have zIl := Cl _ _ tIl tC'z.
 have tBz := Bl _ _ tIl tC'z.
@@ -465,9 +358,9 @@ split => //; suff->: C[t]_(b, l) = C[t]_(a, l) by [].
 congr nth; apply: eq_in_find => y /= yIl.
 have [xIa|xNIa] := boolP (x \in a); last first.
   apply: eq_diconnect_to => x1.
-  by rewrite /b /=; case: eqP=> // ->; rewrite [a _](negPf xNIa).
+  by rewrite /b inE /=; case: eqP xNIa => [->/negPf->|].
 apply/idP/idP => /=. 
-  apply/diconnect_to_sub/subsetP=> u.
+  apply/sub_diconnect_to/subsetP=> u.
   by rewrite !inE => /andP[].
 case/andP=> tCy Cyt.
 have /eq_diconnect-> : relto b r =2 relto (predC1 x) (relto a r).
@@ -546,8 +439,8 @@ have [yIxl/=|yNIxl/=] := boolP (y \in _); last first.
   have := mem_last z p.
   by rewrite -HD inE => /orP[/eqP->//|/ApB].
 have [yCx|yNCx] := boolP (y -[_]-> x); last first.
-apply/sym_equal/idP/negP; apply: contra yNCx => xCy.
-  have /connectP[p Hp Hy] := connect_to_from xCy.
+apply/sym_equal/idP/negP; apply: contra yNCx.
+  rewrite connect_rev /= => /connectP[p Hp Hy].
   apply/connectP; exists p => //.
   move: Hp; rewrite /= path_from path_to => /andP[->].
   case: p Hy => // z p1.
@@ -555,13 +448,14 @@ apply/sym_equal/idP/negP; apply: contra yNCx => xCy.
   rewrite [a x](subsetP HS) ?HD //.
   by apply/allP=> i /Ap iB; rewrite [a _](subsetP HS).
 apply/sym_equal/idP.
-have /connect_to_from/connectP[p Hp Hy] : y -[b]-> x.
+have : y -[b]-> x.
   rewrite (eq_connect (_ : _ =2 (relto b (relto a r)))); last first.
     move=> x1 y1 /=.
     by case: (boolP (_ \in b)) => // /(subsetP HS)->.
   apply: connect_to_forced => // z zDy yCz zCx.
   rewrite [b _]HD.
   by have [_ /(_ y z yIxl yCz)] := HW.
+rewrite connect_rev => /connectP[p Hp Hy].
 apply/connectP; exists p => //.
 move: Hp; rewrite /= path_from path_to => /andP[->].
 case: p Hy => // z p1.
@@ -666,7 +560,7 @@ elim: L (_, _) => /=
     by rewrite !inE negb_and => /orP[] /negPf->.
   rewrite inE => /orP[/eqP->|yIl2].
     by apply: connect0.
-  apply: connect_to_sub (xCy _ yIl2); apply/subsetP => i /=.
+  apply: sub_connect_to (xCy _ yIl2); apply/subsetP => i /=.
   by rewrite !inE => /andP[].
 have F1 : #|s1| <= n.
   by rewrite -ltnS (leq_trans _ Hl).
@@ -699,7 +593,7 @@ split; [split=> //= | exists (l4 ++ l2); split => //= [||||z]].
   by rewrite /= s1E !inE.
 rewrite mem_cat => /orP[] zIl4; last by apply: xCy.
 apply: connect_trans (_: y -[_]-> z); last first.
-  apply: connect_to_sub (Cyz _ zIl4); apply/subsetP => i.
+  apply: sub_connect_to (Cyz _ zIl4); apply/subsetP => i.
   by rewrite /= s1E !inE => /andP[].
 apply: connect_to1 (Rx _ _); rewrite !inE ?eqxx //.
 by move: yIs1; rewrite s1E !inE=> /and3P[_ ->].
@@ -767,7 +661,6 @@ split=> // [i iIl1|x]; first by rewrite Sl2F // l2E mem_cat iIl1 orbT.
 rewrite inE => /orP[/eqP->|//]; last exact: FI.
 by apply: Sl2F; rewrite l2E mem_cat yIl3.
 Qed.
-
 
 End Stack.
 

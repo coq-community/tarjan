@@ -74,28 +74,30 @@ Qed.
 Definition split_after (T :eqType) (x : T) (s : seq T) :=
   let i := index x s in (rcons (take i s) x, drop i.+1 s).
 
-Fixpoint rank (x : V) stack : nat :=
-  if stack isn't y :: s then infty
-  else if (x == y) && (x \notin s) then size s else rank x s.
+Record env := Env {blacks : {set V}; stack : seq V; sccs : {set {set V}};
+                   sn : nat; num: {ffun V -> nat}}.
 
-Record env := Env {blacks : {set V}; stack : seq V; sccs : {set {set V}}}.
+Definition set_infty (s : pred V) f := 
+  [ffun x => if x \in s then infty.+1 else f x].
 
-Definition add_stack x e := Env (blacks e) (x :: stack e) (sccs e).
-Definition add_blacks x e := Env (x |: blacks e) (stack e) (sccs e).
-Definition add_sccs x e := let (s2, s3) := split_after x (stack e) in
-                            Env (x |: blacks e) s3 ([set y in s2] |: sccs e).
+Definition add_stack x e :=
+  Env (blacks e) (x :: stack e) (sccs e) (sn e).+1
+      (finfun [eta num e with x |-> sn e]).
+Definition add_blacks x e :=
+  Env (x |: blacks e) (stack e) (sccs e) (sn e) (num e).
+Definition add_sccs x e :=
+   let (s2, s3) := split_after x (stack e) in
+   Env (x |: blacks e) s3 ([set y in s2] |: sccs e)
+       (sn e) (set_infty (mem s2) (num e)).
 
 Definition dfs1 (dfs' : {set V} -> env -> nat * env) (x : V) e :=
-    let m := rank x (x :: stack e) in
     let: (m1, e1) := dfs' [set y in successors x] (add_stack x e) in
-    if m1 >= m then (infty, add_sccs x e1) else (m1, add_blacks x e1).
+    if m1 >= sn e then (infty, add_sccs x e1) else (m1, add_blacks x e1).
 
 Definition dfs' dfs1 dfs' (roots : {set V}) e :=
   if [pick x in roots] isn't Some x then (infty, e)
   else let roots' := roots :\ x in
-       let: (m1, e1) :=
-         if [|| x \in stack e | x \in blacks e] then (rank x (stack e), e)
-         else dfs1 x e in
+       let: (m1, e1) := if num e x != 0 then (num e x, e) else dfs1 x e in
        let: (m2, e2) := dfs' roots' e1 in (minn m1 m2, e2).
 
 Fixpoint tarjan_rec n : {set V} -> env -> nat * env :=
@@ -103,7 +105,7 @@ Fixpoint tarjan_rec n : {set V} -> env -> nat * env :=
   else fun r e => (infty, e).
 
 Let N := #|V| * #|V|.+1 + #|V|.
-Definition e0 := (Env set0 [::] set0).
+Definition e0 := (Env set0 [::] set0 1 [ffun _ => 0]).
 Definition tarjan := sccs (tarjan_rec N setT e0).2.
 
 (**************************************************************)

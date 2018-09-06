@@ -1,7 +1,7 @@
 From mathcomp
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple.
 From mathcomp
-Require Import bigop finset finfun perm fingraph path div.
+Require Import bigop finset finfun perm fingraph path div extra.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -62,57 +62,10 @@ Section tarjan.
 Variable (V : finType) (successors : V -> seq V).
 Notation edge := (grel successors).
 Notation gconnect := (connect edge).
+Notation gdiconnect := (diconnect edge).
+Notation gsccs := (sccs edge).
 Notation infty := #|V|.
 
-(*************************************************)
-(* Connected components of the graph, abstractly *)
-(*************************************************)
-
-Notation gsymconnect := [rel x y | gconnect x y && gconnect y x].
-
-Lemma gsymconnect_equiv : equivalence_rel gsymconnect.
-Proof.
-split; first by rewrite /gsymconnect /= connect0.
-move=> /andP [xy yx]; rewrite /gsymconnect /=.
-by apply/idP/idP => /andP [/(connect_trans _)-> // /connect_trans->].
-Qed.
-
-Definition gsccs := equivalence_partition gsymconnect setT.
-
-Lemma gsccs_partition : partition gsccs setT.
-Proof. by apply: equivalence_partitionP => ?*; apply: gsymconnect_equiv. Qed.
-
-Definition cover_gsccs := cover_partition gsccs_partition.
-
-Lemma trivIset_gsccs : trivIset gsccs.
-Proof. by case/and3P: gsccs_partition. Qed.
-Hint Resolve trivIset_gsccs.
-
-Notation scc_of := (pblock gsccs).
-
-Lemma mem_scc x y : x \in scc_of y = gsymconnect y x.
-Proof.
-by rewrite pblock_equivalence_partition // => ?*; apply: gsymconnect_equiv.
-Qed.
-
-Definition def_scc scc x := @def_pblock _ _ scc x trivIset_gsccs.
-
-Definition is_subscc (A : {set V}) := A != set0 /\ {in A &, forall x y, gconnect x y}.
-
-Lemma is_subscc_in_scc (A : {set V}) :
-  is_subscc A -> exists2 scc, scc \in gsccs & A \subset scc.
-Proof.
-move=> []; have [->|[x xA]] := set_0Vmem A; first by rewrite eqxx.
-move=> AN0 A_sub; exists (scc_of x); first by rewrite pblock_mem ?cover_gsccs.
-by apply/subsetP => y yA; rewrite mem_scc /= !A_sub //.
-Qed.
-
-Lemma is_subscc1 x (A : {set V}) : x \in A ->
-  (forall y, y \in A -> gconnect x y /\ gconnect y x) -> is_subscc A.
-Proof.
-move=> xA AP; split; first by apply: contraTneq xA => ->; rewrite inE.
-by move=> y z /AP [xy yx] /AP [xz zx]; rewrite (connect_trans yx).
-Qed.
 
 (**********************************************************)
 (*               Tarjan 72 algorithm,                     *)
@@ -670,8 +623,8 @@ have xe_uniq : uniq (x :: stack e).
   by have := e1_uniq; rewrite s_def cat_uniq => /and3P [].
 have x_stack : x \in stack e1 by rewrite s_def mem_cat mem_head orbT.
 have x_grays : x \in grays e1 by rewrite keep_gray grays_add_stack ?setU11.
-have sx_subscc : is_subscc [set y in rcons s x].
-  apply: (@is_subscc1 x); first by rewrite inE mem_rcons mem_head.
+have sx_subscc : is_subscc edge [set y in rcons s x].
+  apply: (@is_subscc1 _ _ x); first by rewrite inE mem_rcons mem_head.
   move=> y; rewrite !inE mem_rcons in_cons => /predU1P [->//|y_s]; split.
     apply: (@wf_grays_to_stack e1) => //; first by rewrite s_def mem_cat y_s.
     rewrite s_def rank_catl ?mem_head // rank_catr //=; last first.
@@ -740,7 +693,7 @@ case: ltnP => [m1_small|m1_big] //=; rewrite !inE eqxx /=; split=> //.
       have /setU1P [eq_yx|//] := scc_sub y y_scc.
       rewrite eq_yx in y_scc.
       have x'_scc : (x' \in scc).
-        rewrite -(def_scc _ y_scc) // mem_scc /= x_to_x' /=.
+        rewrite -(@def_scc _ edge _ _ _ y_scc) // mem_scc /diconnect x_to_x' /=.
         by rewrite (wf_grays_to_stack e1_gwf) // ltnW.
       have /scc_sub := x'_scc.
       rewrite !inE (negPf neq_x'x) /=.
@@ -762,7 +715,7 @@ case: ltnP => [m1_small|m1_big] //=; rewrite !inE eqxx /=; split=> //.
       apply: pc3; rewrite inE in_cons y_stack orbT /=.
       apply/existsP; exists z.
       by rewrite z_stack1 in_cons negb_or neq_zx zNstack.
-have scc_max : scc_of x \subset [set y in s2].
+have scc_max : pblock gsccs x \subset [set y in s2].
   apply/subsetP=> y; rewrite inE=> y_sccx; apply: contraTT isT => yNs2.
   have xy : gconnect x y.
     by have := y_sccx; rewrite mem_scc /= => /andP[].
@@ -795,9 +748,9 @@ have scc_max : scc_of x \subset [set y in s2].
     by rewrite in_cons (negPf neq_x'x) /= x'Nstack.
   - move=> /bigcupP [scc'].
     rewrite black_sccs1 inE => /andP[scc'_gsccs scc'_black].
-    move=> /def_scc - /(_ scc'_gsccs) eq_scc'; rewrite -eq_scc' in scc'_black.
-    have : x \in scc_of y'.
-      have:= y_sccx; rewrite !mem_scc /= andbC => /andP[yx _].
+    move=> /def_scc - /(_ _ scc'_gsccs) eq_scc'; rewrite -eq_scc' in scc'_black.
+    have : x \in pblock gsccs y'.
+      have:= y_sccx; rewrite !mem_scc /diconnect /= andbC => /andP[yx _].
       by rewrite (connect_trans y'y) //= (connect_trans xx') //= connect1.
     by move=> /(subsetP scc'_black); case: colorP x_grays.
   - move: x'_s2; rewrite mem_rcons in_cons => /predU1P [eq_x'x|x_s].
@@ -832,12 +785,12 @@ split=> //.
     have x_s2 : x \in [set y in s2] by rewrite inE mem_rcons mem_head.
     have s2_gsccs : [set y in rcons s x] \in gsccs.
        apply/imsetP => /=; exists x => //.
-      rewrite -[RHS](@def_scc _ x); last 2 first.
+      rewrite -[RHS](@def_scc _ edge _ x); last 2 first.
       * by apply/imsetP; exists x.
-      * by rewrite !inE ?connect0.
+      * by rewrite !inE ?diconnect0.
       apply/eqP; rewrite eqEsubset scc_max.
       have [scc' scc'_gsccs sub'] := is_subscc_in_scc sx_subscc.
-      by rewrite (@def_scc scc') ?sub' //; apply: (subsetP sub').
+      by rewrite (@def_scc _ edge scc') ?sub' //; apply: (subsetP sub').
     have [scc_gsccs|] //= := boolP (scc \in gsccs); last first.
       by apply: contraNF; rewrite orbF => /eqP->.
     apply/idP/idP.
@@ -846,7 +799,8 @@ split=> //.
         by case: eqP=> [->|] //= _ => /(subsetP sb).
       by move=> /subset_trans; apply; rewrite subsetU1.
     have [x_scc|xNscc] := boolP (x \in scc).
-      by move=> _; rewrite -(def_scc _ x_scc) // (def_scc s2_gsccs) ?eqxx.
+      by move=> _; rewrite -(@def_scc _ edge _ _ _ x_scc) //
+                            (def_scc s2_gsccs) ?eqxx.
     rewrite -subDset (setDidPl _); first by move->; rewrite orbT.
     by rewrite disjoint_sym (@eq_disjoint1 _ x) // => y; rewrite !inE.
 - split=> //.
@@ -901,14 +855,14 @@ case: tarjan_rec => [m e] [].
   + by split=> //; rewrite /= ?cover0 ?grays0 ?set0D ?setU0.
   + by move=> x; rewrite inE.
   + apply/setP=> y; rewrite !inE /= subset0 andbC; case: eqP => //= ->.
-    by have /and3P [_ _ /negPf->]:= gsccs_partition.
+    by have /and3P [_ _ /negPf->]:= sccs_partition edge.
 rewrite subTset => /eqP blackse [[[stack_wf _ _] _ _]].
 rewrite grays0 => grayse; rewrite grayse setU0 in blackse.
 rewrite /black_gsccs /= blackse => sccse _ [_ minfty _].
 have {sccse}sccse: sccs e = gsccs.
   by apply/setP=> scc; rewrite sccse inE subsetT andbT.
 have stacke : stack e = [::].
-  have := stack_wf; rewrite grayse blackse sccse cover_gsccs set0U setDv.
+  have := stack_wf; rewrite grayse blackse sccse cover_sccs set0U setDv.
   by case: stack => // x s /setP /(_ x); rewrite !inE eqxx.
 congr (_, _); first by case: minfty => // [[x _ [y xy]]]; rewrite stacke.
 by case: e blackse sccse stacke {stack_wf grayse minfty} => //= *; congr Env.
