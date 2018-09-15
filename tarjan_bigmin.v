@@ -331,19 +331,17 @@ Qed.
 
 Lemma set_infty_eq0 (P : pred V) f x : (forall x, P x -> f x != 0) ->
   (set_infty P f x == 0) = (f x == 0).
-Proof.
-Admitted.
+Proof. by move=> /(_ x); rewrite ffunE; case: P => // /(_ isT)/negPf->. Qed.
 
 Lemma set_infty_eq_infty (P : pred V) f x :
   (set_infty P f x == infty) = P x || (f x == infty).
-Proof.
-Admitted.
+Proof. by rewrite ffunE; case: P => //; rewrite eqxx. Qed.
 
 Lemma set_infty_infty (P : pred V) f x : P x -> set_infty P f x = infty.
-Proof. by rewrite /set_infty ffunE/=; case: (P _). Qed.
+Proof. by rewrite ffunE/=; case: (P _). Qed.
 
 Lemma set_infty_id (P : pred V) f x : ~~ P x -> set_infty P f x = f x.
-Proof. by rewrite /set_infty ffunE/=; case: (P _). Qed.
+Proof. by rewrite ffunE/=; case: (P _). Qed.
 
 
 (*******************)
@@ -363,25 +361,15 @@ Record wf_num e := WfNum {
 }.
 
 Lemma ord_num x e : wf_num e -> @inord infty (num e x) = num e x :> nat.
-Admitted.
-
-Lemma add_stack_nwf x e : x \in whites e -> wf_color e ->
-  wf_num e -> wf_num (add_stack x e).
 Proof.
-Admitted.
+move=> [_ _ /(_ x)]; case: eqP => [->|_ nLs snE _]; rewrite inordK //.
+by rewrite (leq_trans (nLs _)) // snE ltnS (leq_trans (max_card _)).
+Qed.
 
- Lemma add_blacks_nwf x e : x \in grays e -> wf_color e ->
-   wf_num e -> wf_num (add_blacks x e).
-Admitted.
-
- Lemma add_sccs_nwf x e :
-   take (index x (stack e)) (stack e) \subset blacks e ->
-   x \in grays e -> wf_color e ->
-   wf_num e -> wf_num (add_stack x e).
-Admitted.
-
-Lemma num_inftyP e x : reflect (num e x = infty) (x \in cover (sccs e)).
-Proof. Admitted.
+Lemma num_inftyP e x : 
+  wf_num e ->
+  reflect (num e x = infty) (x \in cover (sccs e)).
+Proof. by case => _ <- _ _ _; apply/eqP. Qed.
 
 Lemma sn_small e : wf_num e -> sn e <= infty.
 Proof. by move=> e_nwf; rewrite wf_sn// ltnS max_card. Qed.
@@ -393,6 +381,44 @@ move=> e_cwf e_nwf; symmetry; rewrite lt0n wf_num0//; case: stackP => //=.
   by move=> x_stack; rewrite wf_num_lt // wf_num_infty//; case: stackP x_stack.
 by rewrite -wf_num_infty => // /eqP->; rewrite ltnNge sn_small.
 Qed.
+
+Lemma add_stack_nwf x e : x \in whites e -> wf_color e ->
+  wf_num e -> wf_num (add_stack x e).
+Proof.
+move=> x_w wf_c wf_e.
+have [nEw nEc nLs snE pE] := wf_e.
+split => [y|y|y||y z]; rewrite ?ffunE ?inE /=.
+- rewrite whites_add_stack; case: (y =P x) => [->|/eqP yDx]; rewrite !inE.
+    by rewrite snE eqxx.
+  by rewrite nEw (negPf yDx).
+- case: (y =P x) => [->|//].
+  rewrite eqn_leq snE [#|V|.+1 <= _]leqNgt !ltnS.
+  rewrite -(cardsC (grays e :|: blacks e)) (@cardsD1 _ x (~: _)) !inE.
+  case: color4P x_w => //= x_w.
+  by rewrite addnS ltnS leq_addr andbF.
+- by case: (y == x) => // nE; rewrite ltnS ltnW // nLs.
+- rewrite grays_add_stack // snE.
+  rewrite [in RHS](cardD1 x) !inE eqxx /=; congr (_.+2).
+  apply: eq_card => z; rewrite !inE.
+  by case: (z =P x) => //= ->; case: color4P x_w.
+- rewrite ![_ == x]eq_sym.
+  do 2 case: eqP => //=.
+  * by rewrite leqnn.
+  * by rewrite leqNgt num_stackP => // _ _ _ /andP[_ ->].
+  * by rewrite num_stackP => // _ _ /andP[_ nLs1]; rewrite ltnW.
+  * by move=> *; apply: pE.
+Qed.
+
+Lemma add_blacks_nwf x e : x \in grays e -> wf_color e ->
+   wf_num e -> wf_num (add_blacks x e).
+Admitted.
+
+Lemma add_sccs_nwf x e :
+   take (index x (stack e)) (stack e) \subset blacks e ->
+   x \in grays e -> wf_color e ->
+   wf_num e -> wf_num (add_stack x e).
+Admitted.
+
 
 Lemma stack_neq_infty e x : wf_color e -> wf_num e ->
    x \in stack e -> (num e) x != infty.
