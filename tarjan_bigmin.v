@@ -411,7 +411,13 @@ Qed.
 
 Lemma add_blacks_nwf x e : x \in grays e -> wf_color e ->
    wf_num e -> wf_num (add_blacks x e).
-Admitted.
+Proof.
+move=> x_g wf_c wf_e.
+have [nEw nEc nLs snE pE] := wf_e.
+split => //= [y|].
+  by rewrite whites_add_blacks !inE nEw; case: eqP => // ->; case: color4P x_g.
+by rewrite grays_add_blacks setUA /= [_ :|: [set x]]setUC setD1K.
+Qed.
 
 Lemma add_sccs_nwf x e :
    take (index x (stack e)) (stack e) \subset blacks e ->
