@@ -360,11 +360,14 @@ Record wf_num e := WfNum {
    wf_num_stack : {in stack e &, forall x y,  (num e x <= num e y) = (y <[e]= x)}
 }.
 
-Lemma ord_num x e : wf_num e -> @inord infty (num e x) = num e x :> nat.
+Lemma leq_num_infty e x :  wf_num e -> (num e x) <= infty.
 Proof.
-move=> [_ _ /(_ x)]; case: eqP => [->|_ nLs snE _]; rewrite inordK //.
-by rewrite (leq_trans (nLs _)) // snE ltnS (leq_trans (max_card _)).
+move=> [_ _ /(_ x)]; case: eqP => [->|_ nLs snE _] //.
+by rewrite -ltnS (leq_trans (nLs _)) // snE ltnS (leq_trans (max_card _)).
 Qed.
+
+Lemma ord_num x e : wf_num e -> @inord infty (num e x) = num e x :> nat.
+Proof. by move=> e_n; rewrite inordK // ltnS leq_num_infty. Qed.
 
 Lemma num_inftyP e x : 
   wf_num e ->
@@ -434,9 +437,8 @@ split => [y|y|y||y z]; rewrite ?ffunE ?(inE) /=.
   exact: nEw.
 - set r := rcons _ _.
   rewrite [cover _]bigcup_setU /= inE.
-  rewrite (bigD1 [set y in r]) 1?big1 ?inE //= => [|i].
-    by case:  (_ \in _); [rewrite eqxx | exact: nEc].
-  by rewrite !inE; case: (_ == _).
+  rewrite big_set1 inE.
+  by case:  (_ \in _); [rewrite eqxx | exact: nEc].
 - case: (boolP (_ \in _)); rewrite ?eqxx => // _; exact: nLs.
 - by rewrite grays_add_sccs ?wf_uniq // setUA /= [_ :|: [set x]]setUC setD1K.
 - case: (splitP (grays_stack x_g)) tsb pE (wf_uniq wf_c) =>
@@ -852,9 +854,9 @@ case: ltnP => [m1_small|m1_big] //=.
     (* move: m1_small; rewrite -{}num_x1 => num_x1. *)
     have x1_stack : x1 \in stack e1.
       rewrite num_stackP// num_x1 (leq_trans m1_small) ?andbT.
-        rewrite m2_min (_ : 1 = @inord infty 1); last by admit.
-        apply/bigmin_geqP => i; rewrite !inordK//=; last by admit.
-        rewrite lt0n wf_num0//.
+        rewrite m2_min (_ : 1 = @inord infty 1); last by rewrite inordK.
+        apply/bigmin_geqP => i.
+        rewrite ord_num // inordK//= lt0n wf_num0//.
         rewrite wreachex !inE => /predU1P[->|].
           by case: color4P x_stack. (* TODO: add this to ssrdone *)
         by rewrite whites1 inE => ->.
@@ -1002,18 +1004,50 @@ split=> //.
     * by rewrite grays_add_sccs// ?take_s// setUCA setUA setD1K // wf_sn.
     * rewrite drop_s take_s// => z t z_stack t_stack.
       rewrite !set_infty_id/=; last 2 first.
-        - admit.
-        - admit.
+      - move: e1_uniq; rewrite s_def stack_add_stack -cat_rcons.
+        by move=>/uniq_catRL<- //; rewrite mem_cat orbC t_stack.
+      - move: e1_uniq; rewrite s_def stack_add_stack -cat_rcons.
+        by move=>/uniq_catRL<- //; rewrite mem_cat orbC z_stack.
       rewrite !(subenv_num sube1) ?ffunE/=;
         do ?by rewrite in_cons ?t_stack ?z_stack orbT.
       rewrite !ifN ?wf_num_stack//.
-      - admit.
-      - admit.
+      - move: xe_uniq; rewrite /= andbC => /andP[_].
+        by apply: contra => /eqP<-.
+      - move: xe_uniq; rewrite /= andbC => /andP[_].
+        by apply: contra => /eqP<-.
   + split=> //=; rewrite ?grays_add_sccs ?stack_add_sccs ?take_s ?drop_s// ?g1Nx.
-      (* exact: wf_grays_to_stack. *)
-      (* exact: wf_stack_to_grays. *)
-      admit.
-      admit.
+    * move=> y z y_g z_s; rewrite !ffunE; rewrite !ifN /=; last 2 first.
+      - case: (splitP x_stack) take_s drop_s e1_uniq 
+           => l1 l2 -> -> /uniq_catRL<-//.
+        by rewrite mem_cat orbC z_s.
+      - rewrite mem_rcons inE negb_or.
+        case: eqP y_g => [->|_ y_g /=]; first by case: color4P x_white.
+        apply/negP =>/(subsetP sb)=> y_b.
+        by move: y_g; rewrite -g1Nx !inE andbC; case: color4P y_b.
+      - apply: wf_grays_to_stack => //.
+          by move: y_g; rewrite -g1Nx !inE; case/andP.
+        by rewrite s_def mem_cat stack_add_stack inE z_s !orbT.
+     * move=> y y_s; rewrite !ffunE /= ifN; last first.
+         case: (splitP x_stack) take_s drop_s e1_uniq 
+             => l1 l2 -> -> /uniq_catRL<-//.
+         by rewrite mem_cat orbC y_s.
+       have y_s1 : y \in stack e1.
+         by rewrite s_def stack_add_stack mem_cat !inE y_s !orbT.
+       have [z [z_g zLy yCz]] := wf_stack_to_grays e1_gwf y_s1.
+       have zDx : z != x.
+         apply: contraTneq zLy => ->.
+         rewrite wf_num_stack // -ltnNge.
+         move: e1_uniq; rewrite s_def !index_cat => uC.
+         rewrite !ifN ?stack_add_stack /= ?eqxx ?addn0 //; last 2 first.
+         - by rewrite -(uniq_catRL uC) stack_add_stack 
+                      ?(mem_cat, inE, y_s, orbT).
+         - by rewrite -(uniq_catRL uC) stack_add_stack 
+                      ?(mem_cat, inE, eqxx, orbT).
+         case: eqP y_s => [<-| _] /=; first by case: color4P x_white.
+         by rewrite addnC ltnS leq_addl.
+       exists z; split => //; first by rewrite -g1Nx !inE zDx.
+       rewrite !ffunE ifN //= mem_rcons !inE (negPf zDx) /=.
+       by apply/negP=> /(subsetP sb); case: color4P z_g.
   + move=> y; rewrite !inE whites_add_sccs ?take_s //.
     move=> /predU1P [->|/Nbw1//]; apply/pred0P=> z //=.
     by have [/succ_whiteF->|] := boolP (z \in successors x).
@@ -1043,16 +1077,25 @@ split=> //.
   rewrite (subset_trans (subenv_blacks sube1)) ?subsetUr //=.
   rewrite (subset_trans (subenv_sccs sube1)) ?subsetUr //=.
   apply/andP; split.
-    by rewrite take_s; admit.
+    rewrite take_s.
+    apply/forall_inP => y y_s.
+    have yNIr : y \notin rcons s x.
+      move: e1_uniq; rewrite s_def -cat_rcons => /uniq_catRL<-//.
+      by rewrite mem_cat y_s orbT.
+    have /(subenv_num sube1) : y \in stack (add_stack x e).
+      by rewrite inE y_s orbT.
+    rewrite !ffunE /= !ifN => [->|] //.
+    by apply: contra yNIr => /eqP->; rewrite mem_rcons inE eqxx.
   by apply/'exists_eqP; exists ord0; rewrite drop0.
 - rewrite whites_add_sccs ?take_s ?sb //.
   by rewrite whites1 whites_add_stack big_set1 wreachex setDDl.
 - rewrite big_set1 /= take_s; apply/eqP; rewrite eqn_leq leq_ord andbT.
-  rewrite [X in X <= _](_ : infty = @inord infty infty); last admit.
+  rewrite [X in X <= _](_ : infty = @inord infty infty); last by rewrite inordK.
   apply/bigmin_geqP => y /= /numx_le.
-  apply: contraTT; rewrite -!ltnNge ?inordK//; last admit.
-  rewrite set_infty_id; last admit.
-  rewrite [num _ x](subenv_num sube1) ?mem_head//= ffunE/= eqxx.
+  apply: contraTT; rewrite -!ltnNge ?inordK//; last first.
+    rewrite ltnS ffunE; case: (mem _ _) => //.
+    by apply: leq_num_infty.
+  rewrite ffunE /=; case: (boolP (_ \in _)) => [|HNI _]; first by rewrite ltnn.
   admit.
 
 (* rewrite wf_num_lt. *)
