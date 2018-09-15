@@ -422,9 +422,30 @@ Qed.
 Lemma add_sccs_nwf x e :
    take (index x (stack e)) (stack e) \subset blacks e ->
    x \in grays e -> wf_color e ->
-   wf_num e -> wf_num (add_stack x e).
-Admitted.
-
+   wf_num e -> wf_num (add_sccs x e).
+Proof.
+move=> tsb x_g wf_c wf_n.
+have [nEw nEc nLs snE pE] := wf_n.
+split => [y|y|y||y z]; rewrite ?ffunE ?(inE) /=.
+- rewrite whites_add_sccs ?wf_uniq // mem_rcons inE.
+  case: (y =P x)=> [->|_] /=; first by case: color4P x_g.
+  case: (boolP (_ \in _))=> [/(subsetP tsb)|_].
+    by case: color4P x_g.
+  exact: nEw.
+- set r := rcons _ _.
+  rewrite [cover _]bigcup_setU /= inE.
+  rewrite (bigD1 [set y in r]) 1?big1 ?inE //= => [|i].
+    by case:  (_ \in _); [rewrite eqxx | exact: nEc].
+  by rewrite !inE; case: (_ == _).
+- case: (boolP (_ \in _)); rewrite ?eqxx => // _; exact: nLs.
+- by rewrite grays_add_sccs ?wf_uniq // setUA /= [_ :|: [set x]]setUC setD1K.
+- case: (splitP (grays_stack x_g)) tsb pE (wf_uniq wf_c) =>
+    l1 l2 tsb pE Ul yIl2 zIl2.
+  have yNIr : y \notin rcons l1 x by rewrite -(uniq_catRL Ul) // mem_cat orbC yIl2.
+  have zNIr : z \notin rcons l1 x by rewrite -(uniq_catRL Ul) // mem_cat orbC zIl2.
+  rewrite (negPf yNIr) (negPf zNIr) pE ?(mem_cat, yIl2, zIl2, orbT) //.
+  by rewrite !index_cat !ifN // leq_add2l.
+Qed.
 
 Lemma stack_neq_infty e x : wf_color e -> wf_num e ->
    x \in stack e -> (num e) x != infty.
