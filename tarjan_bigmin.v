@@ -806,7 +806,10 @@ have sx_subscc : is_subscc [set y in rcons s x].
   apply: (@is_subscc1 x); first by rewrite inE mem_rcons mem_head.
   move=> y; rewrite !inE mem_rcons in_cons => /predU1P [->//|y_s]; split.
     apply: (@wf_grays_to_stack e1) => //; first by rewrite s_def mem_cat y_s.
-    admit.
+    rewrite wf_num_stack //s_def; last by rewrite mem_cat y_s.
+    rewrite !index_cat y_s ifN.
+      by rewrite (leq_trans (index_size _ _) (leq_addr _ _)).
+    by apply/negP=> /(subsetP sb); case: color4P x_grays.    
   have [] := @wf_stack_to_grays _ e1_gwf y; first by rewrite s_def mem_cat y_s.
   move=> z [z_gray rank_z] /connect_trans; apply.
   by rewrite (@wf_grays_to_stack e1) //; rewrite (subenv_gray_le sube1).
