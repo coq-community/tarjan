@@ -552,10 +552,14 @@ Proof. by move=> /and4P []. Qed.
 
 Lemma subenv_num e1 e2 : subenv e1 e2 ->
   {in stack e1, forall x, num e2 x = num e1 x}.
-Admitted.
+Proof. by case/and5P=> _ _ _ /forall_inP H _ x *; apply/eqP/H. Qed.
 
-Lemma subenv_sn e1 e2 : subenv e1 e2 -> sn e1 <= sn e2.
-Admitted.
+Lemma subenv_sn e1 e2 : 
+  wf_num e1 -> wf_num e2 -> subenv e1 e2 -> sn e1 <= sn e2.
+Proof.
+move=> /wf_sn-> /wf_sn-> /and5P[/eqP<-] H _ _ _.
+by rewrite ltnS; apply/subset_leq_card/setUS.
+Qed.
 
 Lemma subenvN_subproof e1 e2 : subenv e1 e2 ->
   {n : nat | stack e1 = drop n (stack e2)}.
@@ -615,9 +619,9 @@ Qed.
 Lemma subenv_refl : reflexive subenv.
 Proof.
 move=> e; rewrite /subenv eqxx !subxx /=.
-(* by apply/existsP; exists ord0; rewrite drop0. *)
-(* Qed. *)
-Admitted.
+apply/andP; split; first by apply/forall_inP=> *.
+by apply/existsP; exists ord0; rewrite drop0.
+Qed.
 Hint Resolve subenv_refl.
 
 Lemma subenvee e : subenv e e. Proof. exact: subenv_refl. Qed.
@@ -630,13 +634,15 @@ move=> e2_wf e3_wf e12 e23; rewrite /subenv.
 rewrite (subenv_grays e23) (subenv_grays e12) eqxx.
 rewrite (subset_trans (subenv_blacks e12)) ?subenv_blacks //.
 rewrite (subset_trans (subenv_sccs e12)) ?subenv_sccs //=.
-apply/andP; split; first admit.
+apply/andP; split.
+  apply/forall_inP=> x xIse1; apply/eqP.
+  rewrite -(subenv_num e12) // (subenv_num e23) //.
+  by case: (subenv_stackP e2_wf e12) => l -> _; rewrite mem_cat xIse1 orbT.
 apply/'exists_eqP; apply: uniq_ex_drop; first exact: wf_uniq.
 case: (subenv_stackP _ e23) => // s2 -> _.
 case: (subenv_stackP _ e12) => // s1 -> _.
 by exists (s2 ++ s1); rewrite catA.
-(* Qed. *)
-Admitted.
+Qed.
 
 Lemma subenv_gray_le e1 e2 x y : subenv (add_stack x e1) e2 ->
    wf_color e2 -> wf_num e2 -> y \in grays e2 -> num e2 y <= num e2 x.
@@ -800,7 +806,10 @@ have sx_subscc : is_subscc [set y in rcons s x].
   apply: (@is_subscc1 x); first by rewrite inE mem_rcons mem_head.
   move=> y; rewrite !inE mem_rcons in_cons => /predU1P [->//|y_s]; split.
     apply: (@wf_grays_to_stack e1) => //; first by rewrite s_def mem_cat y_s.
-    admit.
+    rewrite wf_num_stack //s_def; last by rewrite mem_cat y_s.
+    rewrite !index_cat y_s ifN.
+      by rewrite (leq_trans (index_size _ _) (leq_addr _ _)).
+    by apply/negP=> /(subsetP sb); case: color4P x_grays.    
   have [] := @wf_stack_to_grays _ e1_gwf y; first by rewrite s_def mem_cat y_s.
   move=> z [z_gray rank_z] /connect_trans; apply.
   by rewrite (@wf_grays_to_stack e1) //; rewrite (subenv_gray_le sube1).
@@ -849,7 +858,8 @@ case: ltnP => [m1_small|m1_big] //=.
         rewrite wreachex !inE => /predU1P[->|].
           by case: color4P x_stack. (* TODO: add this to ssrdone *)
         by rewrite whites1 inE => ->.
-      by apply: leq_trans (subenv_sn sube1); rewrite leqW.
+      apply: leq_trans (subenv_sn _ _ sube1); rewrite ?leqW //.
+      by apply: add_stack_nwf.
     have [z [z_gray num_z y_to_z]] := wf_stack_to_grays e1_gwf x1_stack.
     exists z; split=> //; rewrite 2?inE ?z_gray ?andbT.
     - rewrite (leq_ltn_trans num_z)// num_x1 (leq_trans m1_small)// /m.
