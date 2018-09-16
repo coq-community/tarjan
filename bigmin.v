@@ -142,10 +142,13 @@ Lemma bigmin_setU (A B : {set I}) F :
   \min_(i in (A :|: B)) F i =
   ord_minn (\min_(i in A) F i) (\min_(i in B) F i).
 Proof.
-(* transitivity (\min_(i in [predU (A :\: B) & B]) F i). *)
-(*   by apply/eq_bigl => y; rewrite !inE; case: (_ \in _) (_ \in _) => [] []. *)
-(* rewrite bigU //=. *)
-Admitted.
+have d : [disjoint A :\: B & B] by rewrite -setI_eq0 setIDAC setDIl setDv setI0.
+rewrite (eq_bigl [predU (A :\: B) & B]) ?bigU//=; last first.
+  by move=> y; rewrite !inE; case: (_ \in _) (_ \in _) => [] [].
+symmetry; rewrite (big_setID B) /= [X in ord_minn X _]minoC -minoA.
+congr (ord_minn _ _); apply: val_inj; rewrite /= (minn_idPr _)//.
+by apply/bigmin_geqP=> i; rewrite inE => /andP[iA iB]; rewrite (bigmin_inf iB).
+Qed.
 
 End extra_bigmin.
 Implicit Arguments geq_bigmin_cond [I P F].
