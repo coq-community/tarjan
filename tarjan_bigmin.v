@@ -1091,20 +1091,26 @@ split=> //.
   by rewrite whites1 whites_add_stack big_set1 wreachex setDDl.
 - rewrite big_set1 /= take_s; apply/eqP; rewrite eqn_leq leq_ord andbT.
   rewrite [X in X <= _](_ : infty = @inord infty infty); last by rewrite inordK.
-  apply/bigmin_geqP => y /= /numx_le.
-  apply: contraTT; rewrite -!ltnNge ?inordK//; last first.
-    rewrite ltnS ffunE; case: (mem _ _) => //.
-    by apply: leq_num_infty.
-  rewrite ffunE /=; case: (boolP (_ \in _)) => [|HNI _]; first by rewrite ltnn.
-  admit.
-
-(* rewrite wf_num_lt. *)
-
-(*  ord_num// rank_lt // => y_stack. *)
-(*   rewrite !s_def !rank_catl ?mem_head ?in_cons ?y_stack ?orbT //=. *)
-(*   by rewrite rank_le_head //; case: color4P x_white. *)
-(* Qed. *)
-Admitted.
+  apply/bigmin_geqP => y /= He.
+  rewrite !ffunE /=.
+  case: (boolP (_ \in _)) => [|yNIs] //.
+  have y_s : y \notin stack e1.
+    apply/negP=> y_s.
+    have := numx_le _ He.
+    rewrite wf_num_stack // s_def.
+    rewrite -cat_rcons !index_cat (negPf yNIs) size_rcons ifT; last first.
+      by rewrite mem_rcons !inE eqxx.
+    rewrite -cats1 index_cat ifN /= ?eqxx ?addn0.
+      by rewrite leqNgt addSn ltnS leq_addr.
+    have := e1_uniq.
+    by rewrite s_def -cat_rcons cat_uniq rcons_uniq -andbA => /and3P[].
+  have nxP : 0 < num e1 x.
+    by move: x_stack; rewrite num_stackP=> // /andP[].
+  case: (@color4P y _ e1_wf) y_s (numx_le _ He) => //.
+    by rewrite -wf_num_infty // => /eqP->.
+  rewrite -wf_num0 // => /eqP->; rewrite leqNgt.
+  by move: x_stack; rewrite num_stackP=> // /andP[->].
+Qed.
 
 Theorem tarjan_rec_terminates n (roots : {set V}) e :
   n >= #|whites e| * #|V|.+1 + #|roots| ->
