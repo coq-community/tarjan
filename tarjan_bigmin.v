@@ -1084,7 +1084,7 @@ split=> //.
       by rewrite mem_cat y_s orbT.
     have /(subenv_num sube1) : y \in stack (add_stack x e).
       by rewrite inE y_s orbT.
-    rewrite !ffunE /= !ifN => [->|] //.
+    rewrite !ffunE /= !ifN => [->||] //.
     by apply: contra yNIr => /eqP->; rewrite mem_rcons inE eqxx.
   by apply/'exists_eqP; exists ord0; rewrite drop0.
 - rewrite whites_add_sccs ?take_s ?sb //.
