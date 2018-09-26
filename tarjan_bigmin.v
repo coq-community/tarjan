@@ -206,10 +206,6 @@ apply/setP=> y; rewrite !inE ffunE/=; case: (altP eqP);
 by rewrite //= ltnS max_card.
 Qed.
 
-Lemma in_seen_visit e x : x \in seen (visit x e).
-Proof. by rewrite seen_visit !inE eqxx. Qed.
-Hint Resolve in_seen_visit.
-
 Lemma sub_stack_seen e : stack e \subset seen e.
 Proof.
 apply/subsetP => x; rewrite !inE => /leq_trans; apply;
@@ -333,7 +329,6 @@ move=> sube12; apply/subsetP=> x; rewrite !inE => x_stack.
 by rewrite (sub_vnum sube12)// (leq_trans x_stack)// leq_sn.
 Qed.
 
-Notation new_seen e1 e2 := (seen e2 :\: seen e1).
 Lemma new_stackE e1 e2 : subenv e1 e2 ->
   new_stack e1 e2 = [set x | sn e1 <= num e2 x < sn e2].
 Proof.
@@ -343,6 +338,8 @@ have [e1_after|e1_before] /= := leqP (sn e1) (num e1 x).
   by rewrite leqNgt -sub_num_lt// -leqNgt.
 by rewrite leqNgt -sub_num_lt// e1_before.
 Qed.
+
+Notation new_seen e1 e2 := (seen e2 :\: seen e1).
 
 Lemma new_seenE e1 e2 : wf_env e1 -> wf_env e2 -> subenv e1 e2 ->
  (new_seen e1 e2) = (new_stack e1 e2) :|: cover (sccs e2) :\: cover (sccs e1).
@@ -358,20 +355,16 @@ Lemma sub_new_stack_new_seen e1 e2 : subenv e1 e2 -> wf_env e1 -> wf_env e2 ->
 Proof. by move=> e1_wf e2_wf sube12; rewrite (@new_seenE e1 e2)// subsetUl. Qed.
 
 Lemma sub_refl e : subenv e e.
-Proof.
-rewrite /subenv !subxx /=; apply/andP; split; first exact/forall_inP.
-by apply/forall_inP => x.
-Qed.
+Proof. by rewrite /subenv !subxx /=; apply/andP; split; apply/forall_inP. Qed.
 Hint Resolve sub_refl.
 
 Lemma sub_trans : transitive subenv.
 Proof.
 move=> e2 e1 e3 sub12 sub23; rewrite /subenv.
 rewrite (subset_trans (sub_sccs sub12))// ?sub_sccs//=.
-apply/andP; split.
-  by apply/forall_inP=> x x_seen; rewrite (sub_snum sub23) ?(sub_snum sub12)//.
-apply/forall_inP=> x x1; have x2 : num e3 x < sn e2.
-  by rewrite (leq_trans x1)// leq_sn.
+apply/andP; split; apply/forall_inP=> x xP.
+  by rewrite (sub_snum sub23) ?(sub_snum sub12)//.
+have x2 : num e3 x < sn e2 by rewrite (leq_trans xP)// leq_sn.
 by rewrite (sub_num_lt sub12)// -(sub_vnum sub23)// (sub_num_lt sub23).
 Qed.
 
@@ -419,10 +412,10 @@ Variant dfs_spec_def (dfs : nat * env) (roots : {set V}) e :
   dfs_spec_def dfs roots e me' m e'.
 Notation dfs_spec dfs roots e := (dfs_spec_def dfs roots e dfs dfs.1 dfs.2).
 
-Definition dfs_correct dfs roots e := 
-  wf_env e -> {in stack e & roots, connected} -> dfs_spec (dfs roots e) roots e.
-Definition dfs1_correct dfs1 x e := 
-  wf_env e -> x \notin seen e -> {in stack e & [set x], connected} -> dfs_spec (dfs1 x e) [set x] e.
+Definition dfs_correct dfs roots e := wf_env e ->
+  {in stack e & roots, connected} -> dfs_spec (dfs roots e) roots e.
+Definition dfs1_correct dfs1 x e := wf_env e -> x \notin seen e ->
+  {in stack e & [set x], connected} -> dfs_spec (dfs1 x e) [set x] e.
 
 (*****************)
 (* Correctness *)
@@ -491,7 +484,6 @@ constructor=> //=.
 rewrite -(setD1K x_roots) nextsU nexts1 inE x_seen/= setU0 setUCA setUA.
 by rewrite [x |: _](setUidPr _) ?sub1set.
 Qed.
-
 
 Lemma dfs1P dfs x e (A := [set y in successors x]):
   dfs_correct dfs A (visit x e) -> dfs1_correct (dfs1 dfs) x e.
