@@ -1,6 +1,7 @@
 -R . mathcomp.tarjan
 
-tarjan_bigmin.v
+tarjan_num.v
+tarjan_nocolors.v
 extra.v
 bigmin.v
 Kosaraju.v
