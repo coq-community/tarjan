@@ -643,20 +643,18 @@ Proof. by apply/setP=> y; rewrite !inE ffunE ltnNge leqW ?max_card. Qed.
 Lemma tarjan_recP : tarjan_rec N setT e0 = (#|V|, Env gsccs [ffun x => #|V|]).
 Proof.
 case: tarjan_rec_terminates; first by rewrite seen0 setC0 cardsT.
-- constructor => //=.
-  + by rewrite sub0set.
-  + by move=> x; rewrite !ffunE//=.
-  + by move=> x; rewrite !ffunE//= ltnNge leqW//.
-  + by move=> x; rewrite !ffunE//= gtn_eqF// /cover big_set0 inE.
-  + by move=> x y; rewrite !ffunE//= andbC ltnNge leqW// ?max_card.
-  + by move=> x y; rewrite !inE !ffunE/= ltnNge leqW// max_card.
-move=> _ _ e -> -> e_wf _ [_].
-  rewrite stack0 setD0; have [stacke _|[x xe]] := set_0Vmem (stack e);
-    last by move=> /(_ _ xe)[?]; rewrite inE.
-  rewrite seen0 set0U setC0 nextsT => seene.
+- constructor; rewrite /= ?sub0set// => x; rewrite !ffunE//.
+  + by rewrite ltnNge leqW//.
+  + by rewrite gtn_eqF// /cover big_set0 inE.
+  + by move=> y; rewrite !ffunE//= andbC ltnNge leqW// ?max_card.
+  + by move=> y; rewrite !inE !ffunE/= ltnNge leqW// max_card.
+move=> _ _ e -> -> e_wf _ [_]; rewrite stack0 setD0.
+have [stacke _|[x xe]] := set_0Vmem (stack e); last first.
+  by move=> /(_ _ xe)[?]; rewrite inE.
+rewrite seen0 set0U setC0 nextsT => seene.
 have numE x : num e x = #|V|.
-  apply/eqP; have /setP/(_ x) := seene; rewrite seenE// stacke set0U !inE.
-  by rewrite -num_sccs.
+  apply/eqP; have /setP/(_ x) := seene.
+  by rewrite seenE// stacke set0U !inE -num_sccs.
 have sccse : sccs e = gsccs.
   apply/eqP; rewrite eqEsubset sub_gsccs//=; apply/subsetP => _/imsetP[/=x _->].
   have: x \in cover (sccs e) by rewrite -num_sccs ?numE//.
