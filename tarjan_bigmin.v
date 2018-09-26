@@ -46,65 +46,18 @@ Let N := #|V| * #|V|.+1 + #|V|.
 Definition e0 := (Env set0 [ffun _ => infty]).
 Definition tarjan := sccs (tarjan_rec N setT e0).2.
 
-(*************************************************)
-(* Connected components of the graph, abstractly *)
-(*************************************************)
+(*****************)
+(* Abbreviations *)
+(*****************)
 
-Notation gsymconnect := [rel x y | gconnect x y && gconnect y x].
-
-Lemma gsymconnect_equiv : equivalence_rel gsymconnect.
-Proof.
-split; first by rewrite /gsymconnect /= connect0.
-move=> /andP [xy yx]; rewrite /gsymconnect /=.
-by apply/idP/idP => /andP [/(connect_trans _)-> // /connect_trans->].
-Qed.
-
-Definition gsccs := equivalence_partition gsymconnect setT.
-
-Lemma gsccs_partition : partition gsccs setT.
-Proof. by apply: equivalence_partitionP => ?*; apply: gsymconnect_equiv. Qed.
-
-Definition cover_gsccs := cover_partition gsccs_partition.
-
-Lemma trivIset_gsccs : trivIset gsccs.
-Proof. by case/and3P: gsccs_partition. Qed.
-Hint Resolve trivIset_gsccs.
-
-Notation scc_of := (pblock gsccs).
-
-Lemma mem_scc x y : x \in scc_of y = gsymconnect y x.
-Proof.
-by rewrite pblock_equivalence_partition // => ?*; apply: gsymconnect_equiv.
-Qed.
-
-Definition def_scc scc x := @def_pblock _ _ scc x trivIset_gsccs.
-
-Definition connected := forall x y, gconnect x y.
-
-Lemma cover1U (A : {set V}) P : cover (A |: P) = A :|: cover P.
-Proof. by apply/setP => x; rewrite /cover bigcup_setU big_set1. Qed.
-
-Lemma connectedU (A B : {set V}) : {in A &, connected} -> {in B &, connected} ->
-  {in A & B, connected} -> {in B & A, connected} -> {in A :|: B &, connected}.
-Proof.
-move=> cA cB cAB cBA z t; rewrite !inE => /orP[zA|zB] /orP[tA|tB];
-by[apply: cA|apply: cB|apply: cAB|apply: cBA].
-Qed.
+Notation gsymconnect := (symconnect edge).
+Notation gsccs := (extra.sccs edge).
+Notation gscc_of := (pblock gsccs).
+Notation gconnected := (connected edge).
 
 (*******************)
 (* next, and nexts *)
 (*******************)
-
-Lemma setUD (B A C : {set V}) : B \subset A -> C \subset B -> 
-  (A :\: B) :|: (B :\: C) = (A :\: C).
-Proof.
-move=> subBA subCB; apply/setP=> x; rewrite !inE.
-have /implyP  := subsetP subBA x; have /implyP  := subsetP subCB x.
-by do !case: (_ \in _).
-Qed.
-
-Lemma setUDl (T : finType) (A B : {set T}) : A :|: B :\: A = A :|: B.
-Proof. by apply/setP=> x; rewrite !inE; do !case: (_ \in _). Qed.
 
 Section Nexts.
 Variable (D : {set V}).
@@ -400,7 +353,7 @@ Qed.
 (*********************)
 
 Definition outenv (roots : {set V}) (e e' : env) := [/\
-  {in new_stack e e' &, connected},
+  {in new_stack e e' &, gconnected},
   {in new_stack e e', forall x, exists2 y, y \in stack e & gconnect x y} &
   seen e' = seen e :|: nexts (~: seen e) roots ].
 
@@ -413,9 +366,9 @@ Variant dfs_spec_def (dfs : nat * env) (roots : {set V}) e :
 Notation dfs_spec dfs roots e := (dfs_spec_def dfs roots e dfs dfs.1 dfs.2).
 
 Definition dfs_correct dfs roots e := wf_env e ->
-  {in stack e & roots, connected} -> dfs_spec (dfs roots e) roots e.
+  {in stack e & roots, gconnected} -> dfs_spec (dfs roots e) roots e.
 Definition dfs1_correct dfs1 x e := wf_env e -> x \notin seen e ->
-  {in stack e & [set x], connected} -> dfs_spec (dfs1 x e) [set x] e.
+  {in stack e & [set x], gconnected} -> dfs_spec (dfs1 x e) [set x] e.
 
 (*****************)
 (* Correctness *)
@@ -452,7 +405,7 @@ have [numx_infty|numx_ninfty]/= := altP eqP.
         by rewrite seen1E setUC inE y_in.
     by rewrite -[LHS]/(val (ord_minn _ _)) -bigmin_setU /= -nexts_split.
   constructor => /=.
-  + rewrite -(@setUD (stack e1)) ?sub_stack//.
+  + rewrite -(@setUD _ (stack e1)) ?sub_stack//.
     apply: connectedU => // y z; last first.
       rewrite !new_stackE// ?inE => /andP[y_ge y_lt] /andP[z_ge z_lt].
       rewrite (@visit_new e2) // z_lt (leq_trans _ z_ge)//.
@@ -518,7 +471,7 @@ have [min_after|min_before] := leqP; last first.
   constructor=> //=; last by rewrite nexts1E setUCA setUA seen1E.
     move=> y z; have [-> _|neq_yx] := eqVneq y x.
       by rewrite new_stackE ?inE// -num1x; apply: visit_new.
-    rewrite -(@setUD (stack (visit x e))) ?sub_stack//.
+    rewrite -(@setUD _ (stack (visit x e))) ?sub_stack//.
     rewrite [in X in _ :|: X]stack_visit// setDUl setDv setU0.
     rewrite [_ :\: stack e](setDidPl _) ?disjoint1s//.
     rewrite setUC !in_setU1 (negPf neq_yx)/=.
@@ -536,7 +489,7 @@ have [min_after|min_before] := leqP; last first.
     rewrite -sub_num_lt// => v_lt; exists v; rewrite ?inE//.
     move: v_in => /in_nextsW[z]; rewrite inE => /(@connect1 _ edge).
     by apply: connect_trans.
-  rewrite -(@setUD (stack (visit x e))) ?sub_stack//.
+  rewrite -(@setUD _ (stack (visit x e))) ?sub_stack//.
   rewrite [in X in _ :|: X]stack_visit// setDUl setDv setU0.
   rewrite [_ :\: stack e](setDidPl _) ?disjoint1s// setUC !in_setU1.
   move=> /predU1P[->|]; first by exists v.
@@ -561,8 +514,8 @@ constructor => //=.
   by case: ltngtP.
 - constructor => //=; rewrite ?seen_store ?sub_new_stack_seen//.
   + rewrite subUset sub_gsccs// andbT sub1set.
-    suff -> : new_stack e e1 = scc_of x by rewrite pblock_mem ?cover_gsccs.
-    apply/setP=> y; rewrite mem_scc /=.
+    suff -> : new_stack e e1 = gscc_of x by rewrite pblock_mem ?cover_sccs.
+    apply/setP=> y; rewrite mem_scc /symconnect.
     have [->|neq_yx] := eqVneq y x.
       by rewrite connect0 !inE num0x -leqNgt leqW ?max_card//= num1x lt_sn_sn1.
     apply/idP/andP=> [|[xy yx]].
@@ -584,7 +537,7 @@ constructor => //=.
     have zNcover e' : wf_env e' -> z \in cover (sccs e') -> x \in cover (sccs e').
       move=> e'_wf /bigcupP[C] Ce zC; apply/bigcupP; exists C => //.
       have /def_scc: C \in gsccs by apply: subsetP Ce; apply: sub_gsccs.
-      move=> /(_ _ zC)<-; rewrite mem_scc /= (connect_trans zy)//=.
+      move=> /(_ _ zC)<-; rewrite mem_scc /= /symconnect (connect_trans zy)//=.
       by apply: connect_sub xz => ?? /andP[_ /connect1].
     rewrite leq_eqVlt num_sccs// num_lt_V// => /orP[|z_stack].
        move=> /zNcover; rewrite -num_sccs// num1x => /(_ _) /eqP eq_V.
@@ -659,7 +612,7 @@ have sccse : sccs e = gsccs.
   apply/eqP; rewrite eqEsubset sub_gsccs//=; apply/subsetP => _/imsetP[/=x _->].
   have: x \in cover (sccs e) by rewrite -num_sccs ?numE//.
   move=> /bigcupP [C Csccs /(def_scc (subsetP (sub_gsccs e_wf) _ Csccs))] eqC.
-  rewrite -eqC (_ : [set _ in _ | _] = scc_of x)// in Csccs *.
+  rewrite -eqC (_ : [set _ in _ | _] = gscc_of x)// in Csccs *.
   by apply/setP => y; rewrite !inE mem_scc /=.
 rewrite big1; last by move=> x _; apply: val_inj; rewrite /= inordK// ?numE.
 congr (_, _); case: e {stacke seene e_wf} => /= sccs num in numE sccse *.
