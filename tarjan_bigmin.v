@@ -8,8 +8,6 @@ Unset Printing Implicit Defensive.
 Section tarjan.
 
 Variable (V : finType) (successors : V -> seq V).
-Notation edge := (grel successors).
-Notation gconnect := (connect edge).
 Notation infty := #|V|.+1.
 
 (*************************************************************)
@@ -17,23 +15,23 @@ Notation infty := #|V|.+1.
 (* rewritten in a functional style  with extra modifications *)
 (*************************************************************)
 
-Record env := Env {sccs : {set {set V}}; num: {ffun V -> nat}}.
-Implicit Types (e : env) (x : V) (roots : {set V}).
+Record env := Env {esccs : {set {set V}}; num: {ffun V -> nat}}.
+
 Definition seen e := [set x | num e x < infty].
 Notation sn e := #|seen e|.
 Definition stack e := [set x | num e x < sn e].
 Notation new_stack e1 e2 := (stack e2 :\: stack e1).
 
 Definition visit x e :=
-  Env (sccs e) (finfun [eta num e with x |-> sn e]).
+  Env (esccs e) (finfun [eta num e with x |-> sn e]).
 Definition store scc e :=
-  Env (scc |: sccs e) [ffun x => if x \in scc then #|V| else num e x].
+  Env (scc |: esccs e) [ffun x => if x \in scc then #|V| else num e x].
 
 Definition dfs1 dfs x e :=
     let: (m1, e1) as res := dfs [set y in successors x] (visit x e) in
     if m1 >= sn e then (#|V|, store (new_stack e e1) e1) else res.
 
-Definition dfs dfs1 dfs roots e :=
+Definition dfs dfs1 dfs (roots : {set V}) e :=
   if [pick x in roots] isn't Some x then (#|V|, e) else
   let: (m1, e1) := if num e x != infty then (num e x, e) else dfs1 x e in
   let: (m2, e2) := dfs (roots :\ x) e1 in (minn m1 m2, e2).
@@ -44,14 +42,16 @@ Fixpoint tarjan_rec n :=
 
 Let N := #|V| * #|V|.+1 + #|V|.
 Definition e0 := (Env set0 [ffun _ => infty]).
-Definition tarjan := sccs (tarjan_rec N setT e0).2.
+Definition tarjan := esccs (tarjan_rec N setT e0).2.
 
 (*****************)
 (* Abbreviations *)
 (*****************)
 
+Notation edge := (grel successors).
+Notation gconnect := (connect edge).
 Notation gsymconnect := (symconnect edge).
-Notation gsccs := (extra.sccs edge).
+Notation gsccs := (sccs edge).
 Notation gscc_of := (pblock gsccs).
 Notation gconnected := (connected edge).
 
@@ -171,11 +171,11 @@ Proof. by rewrite (subset_trans _ (sub_stack_seen _)) ?subsetDl. Qed.
 Section wfenv.
 
 Record wf_env e := WfEnv {
-  sub_gsccs : sccs e \subset gsccs;
+  sub_gsccs : esccs e \subset gsccs;
   max_num : forall x, num e x <= infty;
   num_lt_V_is_stack : forall x, num e x < #|V| -> num e x < sn e;
-  num_sccs : forall x, (num e x == #|V|) = (x \in cover (sccs e));
-  visit_new : forall x y, num e x <= num e y < sn e -> gconnect x y;
+  num_sccs : forall x, (num e x == #|V|) = (x \in cover (esccs e));
+  le_connect : forall x y, num e x <= num e y < sn e -> gconnect x y;
 }.
 
 Variables (e : env) (e_wf : wf_env e).
@@ -197,18 +197,18 @@ move=> subeA; apply/idP/idP => /leq_trans.
 by apply; rewrite subset_leq_card.
 Qed.
 
-Lemma seenE : seen e = stack e :|: cover (sccs e).
+Lemma seenE : seen e = stack e :|: cover (esccs e).
 Proof.
 by apply/setP=> x; rewrite !inE ltnS leq_eqVlt -num_sccs// num_lt_V orbC.
 Qed.
 
-Lemma vs_disjoint : [disjoint stack e & cover (sccs e)].
+Lemma vs_disjoint : [disjoint stack e & cover (esccs e)].
 Proof.
 rewrite -setI_eq0; apply/eqP/setP=> x; rewrite !inE -num_sccs//.
 by rewrite -num_lt_V; case: ltngtP.
 Qed.
 
-Lemma sub_sccs_seen : cover (sccs e) \subset seen e.
+Lemma sub_sccs_seen : cover (esccs e) \subset seen e.
 Proof. by apply/subsetP => x; rewrite !inE -num_sccs// => /eqP->. Qed.
 
 Lemma stack_visit x : x \notin seen e -> stack (visit x e) = x |: stack e.
@@ -239,15 +239,15 @@ have [{y}->|neq_yx] := altP eqP; have [{z}->|neq_zx]//= := altP eqP.
 + by rewrite num_lt_card//; case: ltngtP.
 + move=> /andP[/leq_ltn_trans lt/lt].
   by rewrite num_lt_card//; apply: x_connected.
-+ by rewrite num_lt_card//; apply: visit_new.
++ by rewrite num_lt_card//; apply: le_connect.
 Qed.
 
 Definition subenv e1 e2 := [&&
-  sccs e1 \subset sccs e2,
+  esccs e1 \subset esccs e2,
   [forall x, (num e1 x < infty) ==> (num e2 x == num e1 x)] &
   [forall x, (num e2 x < sn e1) ==> (num e1 x < sn e1)]].
 
-Lemma sub_sccs e1 e2 : subenv e1 e2 -> sccs e1 \subset sccs e2.
+Lemma sub_sccs e1 e2 : subenv e1 e2 -> esccs e1 \subset esccs e2.
 Proof. by move=> /and3P[]. Qed.
 
 Lemma sub_snum e1 e2 : subenv e1 e2 -> forall x, num e1 x < infty -> num e2 x = num e1 x.
@@ -295,7 +295,7 @@ Qed.
 Notation new_seen e1 e2 := (seen e2 :\: seen e1).
 
 Lemma new_seenE e1 e2 : wf_env e1 -> wf_env e2 -> subenv e1 e2 ->
- (new_seen e1 e2) = (new_stack e1 e2) :|: cover (sccs e2) :\: cover (sccs e1).
+(new_seen e1 e2) = (new_stack e1 e2) :|: cover (esccs e2) :\: cover (esccs e1).
 Proof.
 move=> e1_wf e2_wf sube12; rewrite !seenE//; apply/setP=> x.
 rewrite !inE -!num_sccs -?num_lt_V//; do 2!case: ltngtP => //=.
@@ -329,7 +329,7 @@ apply/forall_inP => y y_in; rewrite !ffunE/=.
 by case: (altP (y =P x)) xNseen => // <-; rewrite inE y_in.
 Qed.
 
-Lemma stackE e : wf_env e -> stack e = seen e :\: cover (sccs e).
+Lemma stackE e : wf_env e -> stack e = seen e :\: cover (esccs e).
 Proof.
 move=> e_wf; apply/setP=> x; rewrite seenE// setDUl setDv setU0.
 by rewrite !inE -num_sccs// -num_lt_V//; case: ltngtP.
@@ -365,7 +365,7 @@ Variant dfs_spec_def (dfs : nat * env) (roots : {set V}) e :
   dfs_spec_def dfs roots e me' m e'.
 Notation dfs_spec dfs roots e := (dfs_spec_def dfs roots e dfs dfs.1 dfs.2).
 
-Definition dfs_correct dfs roots e := wf_env e ->
+Definition dfs_correct dfs (roots : {set V}) e := wf_env e ->
   {in stack e & roots, gconnected} -> dfs_spec (dfs roots e) roots e.
 Definition dfs1_correct dfs1 x e := wf_env e -> x \notin seen e ->
   {in stack e & [set x], gconnected} -> dfs_spec (dfs1 x e) [set x] e.
@@ -376,7 +376,8 @@ Definition dfs1_correct dfs1 x e := wf_env e -> x \notin seen e ->
 
 Lemma dfsP dfs1 dfsrec (roots : {set V}) e:
   (forall x, x \in roots -> dfs1_correct dfs1 x e) ->
-  (forall x, x \in roots -> forall e1, subenv e e1 -> dfs_correct dfsrec (roots :\ x) e1) ->
+  (forall x, x \in roots -> forall e1, subenv e e1 ->
+     dfs_correct dfsrec (roots :\ x) e1) ->
   dfs_correct (dfs dfs1 dfsrec) roots e.
 Proof.
 rewrite /dfs => dfs1P dfsP e_wf roots_connected.
@@ -408,12 +409,12 @@ have [numx_infty|numx_ninfty]/= := altP eqP.
   + rewrite -(@setUD _ (stack e1)) ?sub_stack//.
     apply: connectedU => // y z; last first.
       rewrite !new_stackE// ?inE => /andP[y_ge y_lt] /andP[z_ge z_lt].
-      rewrite (@visit_new e2) // z_lt (leq_trans _ z_ge)//.
+      rewrite (@le_connect e2) // z_lt (leq_trans _ z_ge)//.
       by rewrite (sub_vnum sube12)// ltnW.
     rewrite !new_stackE// ?inE => /andP[y_ge y_lt] /andP[z_ge z_lt].
     have [|r] := new2old y; rewrite ?new_stackE ?inE ?y_ge//.
     move=> r_lt /connect_trans->//; have [rz|zr] := leqP (num e1 r) (num e1 z).
-      by rewrite (@visit_new e1)// rz/=.
+      by rewrite (@le_connect e1)// rz/=.
     by rewrite new1c ?new_stackE ?inE ?z_ge ?z_lt //= (leq_trans z_ge)// ltnW.
   + move=> y; rewrite ?new_stackE ?inE// => /andP[y_ge y_lt].
     have [y_lt1|y_ge1] := ltnP (num e1 y) (sn e1).
@@ -470,14 +471,14 @@ have [min_after|min_before] := leqP; last first.
     by rewrite (minn_idPr _)// ltnW.
   constructor=> //=; last by rewrite nexts1E setUCA setUA seen1E.
     move=> y z; have [-> _|neq_yx] := eqVneq y x.
-      by rewrite new_stackE ?inE// -num1x; apply: visit_new.
+      by rewrite new_stackE ?inE// -num1x; apply: le_connect.
     rewrite -(@setUD _ (stack (visit x e))) ?sub_stack//.
     rewrite [in X in _ :|: X]stack_visit// setDUl setDv setU0.
     rewrite [_ :\: stack e](setDidPl _) ?disjoint1s//.
     rewrite setUC !in_setU1 (negPf neq_yx)/=.
     move=> y_e1 /predU1P[->|]; last exact: newc y_e1.
     have [t] := new_old y y_e1; rewrite !inE => t_le /connect_trans->//.
-    rewrite (@visit_new (visit x e))// andbC; move: t_le.
+    rewrite (@le_connect (visit x e))// andbC; move: t_le.
     by rewrite seen_visit !ffunE /= eqxx cardsU1 xNseen add1n !ltnS leqnn.
   move=> y; have [v ve xv] : exists2 v, v \in stack e & gconnect x v.
     have [|v] := @eq_bigmin_cond _ _ (mem (nexts (~: (x |: seen e)) A))
@@ -534,7 +535,8 @@ constructor => //=.
     move=> eq_yz xz zy; have /all_geq [] : z \in nexts (~: seen e) [set x].
       by apply/bigcupP; exists x; rewrite !inE.
     rewrite leqNgt -sub_num_lt// -num_lt_V// -leqNgt ltnS => zNstack.
-    have zNcover e' : wf_env e' -> z \in cover (sccs e') -> x \in cover (sccs e').
+    have zNcover e' : wf_env e' -> z \in cover (esccs e') ->
+                      x \in cover (esccs e').
       move=> e'_wf /bigcupP[C] Ce zC; apply/bigcupP; exists C => //.
       have /def_scc: C \in gsccs by apply: subsetP Ce; apply: sub_gsccs.
       move=> /(_ _ zC)<-; rewrite mem_scc /= /symconnect (connect_trans zy)//=.
@@ -556,7 +558,7 @@ constructor => //=.
     by case: ifPn; rewrite ?eqxx//= => vNe12; rewrite -num_sccs//.
   + move=> y z; rewrite !ffunE; case: ifPn => _.
       by move=> /andP[/leq_ltn_trans Vsmall/Vsmall]; rewrite ltnNge max_card.
-    by case: ifPn => _; [by rewrite ltnNge max_card andbF|exact : visit_new].
+    by case: ifPn => _; [by rewrite ltnNge max_card andbF|exact : le_connect].
 - rewrite /subenv /= (subset_trans (sub_sccs sube1)) ?subsetUr//=.
   apply/andP; split; apply/forallP => v; apply/implyP;
   rewrite ffunE/= new_stackE// ?inE.
@@ -608,9 +610,9 @@ rewrite seen0 set0U setC0 nextsT => seene.
 have numE x : num e x = #|V|.
   apply/eqP; have /setP/(_ x) := seene.
   by rewrite seenE// stacke set0U !inE -num_sccs.
-have sccse : sccs e = gsccs.
+have sccse : esccs e = gsccs.
   apply/eqP; rewrite eqEsubset sub_gsccs//=; apply/subsetP => _/imsetP[/=x _->].
-  have: x \in cover (sccs e) by rewrite -num_sccs ?numE//.
+  have: x \in cover (esccs e) by rewrite -num_sccs ?numE//.
   move=> /bigcupP [C Csccs /(def_scc (subsetP (sub_gsccs e_wf) _ Csccs))] eqC.
   rewrite -eqC (_ : [set _ in _ | _] = gscc_of x)// in Csccs *.
   by apply/setP => y; rewrite !inE mem_scc /=.
