@@ -386,57 +386,54 @@ case: pickP => /= [x x_roots|]; last first.
   do ?constructor=> //=;
     rewrite ?setDv ?r_eq0 ?nexts0 ?sub0set ?eqxx ?setU0 ?big_set0 //=;
     by move=> ?; rewrite inE.
-have [numx_infty|numx_ninfty]/= := altP eqP.
-  case: dfs1P => //=; first by rewrite inE numx_infty ltnn.
-    by move=> u v ue; rewrite inE => /eqP->; apply: roots_connected.
-  move=> _ _  e1 -> -> e1_wf subee1 [new1c new1old seen1E].
-  case: dfsP => //=.
-    move=> u v ue1; rewrite inE => /andP[_ v_roots].
-    have [ue|uNe] := boolP (u \in stack e); first by rewrite roots_connected.
-    have [|w we] := new1old u; first by rewrite inE ue1 uNe.
-    by move=> /connect_trans->//; rewrite roots_connected//.
-  move=> _ _ e2 -> -> e2_wf sube12 [new2c new2old seen2E].
-  have sube2 : subenv e e2 by exact: sub_trans sube12.
-  have nexts_split : nexts (~: seen e) roots =
-        nexts (~: seen e) [set x] :|: nexts (~: seen e1) (roots :\ x).
-    by rewrite -[in LHS](setD1K x_roots) nextsU seen1E setCU nextsUI// nexts_id.
+have [numx_infty|numx_ninfty]/= := altP eqP; last first.
+  have numx_lt : num e x < infty by rewrite ltn_neqAle numx_ninfty max_num.
+  have x_seen : x \in seen e by rewrite inE.
+  case: dfsP => //= [u v ve|_ _ e1 -> -> e1_wf subee1 [new1c new1old seen1E]].
+    by rewrite inE => /andP[_ v_roots]; rewrite roots_connected.
   constructor => //=.
-    rewrite (eq_bigr (fun x => inord (num e2 x))); last first.
-      move=> y y_in; rewrite (@sub_snum e1 e2)// num_lt_infty.
-        by rewrite seen1E setUC inE y_in.
-    by rewrite -[LHS]/(val (ord_minn _ _)) -bigmin_setU /= -nexts_split.
-  constructor => /=.
-  + rewrite -(@setUD _ (stack e1)) ?sub_stack//.
-    apply: connectedU => // y z; last first.
-      rewrite !new_stackE// ?inE => /andP[y_ge y_lt] /andP[z_ge z_lt].
-      rewrite (@le_connect e2) // z_lt (leq_trans _ z_ge)//.
-      by rewrite (sub_vnum sube12)// ltnW.
-    rewrite !new_stackE// ?inE => /andP[y_ge y_lt] /andP[z_ge z_lt].
-    have [|r] := new2old y; rewrite ?new_stackE ?inE ?y_ge//.
-    move=> r_lt /connect_trans->//; have [rz|zr] := leqP (num e1 r) (num e1 z).
-      by rewrite (@le_connect e1)// rz/=.
-    by rewrite new1c ?new_stackE ?inE ?z_ge ?z_lt //= (leq_trans z_ge)// ltnW.
-  + move=> y; rewrite ?new_stackE ?inE// => /andP[y_ge y_lt].
-    have [y_lt1|y_ge1] := ltnP (num e1 y) (sn e1).
-      have [|r] := new1old y; last by exists r.
-      by rewrite new_stackE ?inE// ?y_lt1 -(sub_vnum sube12) ?y_ge.
-    have [|r r_lt1 yr] := new2old y; first by rewrite !inE -leqNgt y_ge1//.
-    rewrite ?inE in r_lt1; have [r_lt|r_ge] := ltnP (num e r) (sn e).
-      by exists r; rewrite ?inE.
-    have [|r' r's rr'] := new1old r; first by rewrite ?inE -leqNgt r_ge r_lt1.
-    by exists r'; rewrite // (connect_trans yr rr').
-  + by rewrite seen2E {1}seen1E nexts_split setUA.
-have numx_lt : num e x < infty by rewrite ltn_neqAle numx_ninfty max_num.
-have x_seen : x \in seen e by rewrite inE.
-case: dfsP => //=.
-  by move=> u v ue; rewrite inE => /andP[_ v_roots]; rewrite roots_connected.
+    rewrite -[in RHS](setD1K x_roots) nextsU nexts1 inE x_seen/= setU0.
+    by rewrite bigmin_setU /= big_set1/= (@sub_snum e e1)// inordK//.
+  constructor=> //=; rewrite -(setD1K x_roots) nextsU nexts1 inE x_seen/=.
+  by rewrite setU0 setUCA setUA [x |: _](setUidPr _) ?sub1set.
+case: dfs1P => //=; first by rewrite inE numx_infty ltnn.
+  by move=> u v ue; rewrite inE => /eqP->; apply: roots_connected.
 move=> _ _  e1 -> -> e1_wf subee1 [new1c new1old seen1E].
+case: dfsP => //= [u v ue1|_ _ e2 -> -> e2_wf sube12 [new2c new2old seen2E]].
+  rewrite inE => /andP[_ v_roots].
+  have [ue|uNe] := boolP (u \in stack e); first by rewrite roots_connected.
+  have [|w we] := new1old u; first by rewrite inE ue1 uNe.
+  by move=> /connect_trans->//; rewrite roots_connected//.
+have sube2 : subenv e e2 by exact: sub_trans sube12.
+have nexts_split : nexts (~: seen e) roots =
+      nexts (~: seen e) [set x] :|: nexts (~: seen e1) (roots :\ x).
+  by rewrite -[in LHS](setD1K x_roots) nextsU seen1E setCU nextsUI// nexts_id.
 constructor => //=.
-  rewrite -[in RHS](setD1K x_roots) nextsU nexts1 inE x_seen/= setU0.
-  by rewrite bigmin_setU /= big_set1/= (@sub_snum e e1)// inordK//.
-constructor=> //=.
-rewrite -(setD1K x_roots) nextsU nexts1 inE x_seen/= setU0 setUCA setUA.
-by rewrite [x |: _](setUidPr _) ?sub1set.
+  rewrite (eq_bigr (fun x => inord (num e2 x))); last first.
+    move=> y y_in; rewrite (@sub_snum e1 e2)// num_lt_infty.
+      by rewrite seen1E setUC inE y_in.
+  by rewrite -[LHS]/(val (ord_minn _ _)) -bigmin_setU /= -nexts_split.
+constructor => /=.
++ rewrite -(@setUD _ (stack e1)) ?sub_stack//.
+  apply: connectedU => // y z; last first.
+    rewrite !new_stackE// ?inE => /andP[y_ge y_lt] /andP[z_ge z_lt].
+    rewrite (@le_connect e2) // z_lt (leq_trans _ z_ge)//.
+    by rewrite (sub_vnum sube12)// ltnW.
+  rewrite !new_stackE// ?inE => /andP[y_ge y_lt] /andP[z_ge z_lt].
+  have [|r] := new2old y; rewrite ?new_stackE ?inE ?y_ge//.
+  move=> r_lt /connect_trans->//; have [rz|zr] := leqP (num e1 r) (num e1 z).
+    by rewrite (@le_connect e1)// rz/=.
+  by rewrite new1c ?new_stackE ?inE ?z_ge ?z_lt //= (leq_trans z_ge)// ltnW.
++ move=> y; rewrite ?new_stackE ?inE// => /andP[y_ge y_lt].
+  have [y_lt1|y_ge1] := ltnP (num e1 y) (sn e1).
+    have [|r] := new1old y; last by exists r.
+    by rewrite new_stackE ?inE// ?y_lt1 -(sub_vnum sube12) ?y_ge.
+  have [|r r_lt1 yr] := new2old y; first by rewrite !inE -leqNgt y_ge1//.
+  rewrite ?inE in r_lt1; have [r_lt|r_ge] := ltnP (num e r) (sn e).
+    by exists r; rewrite ?inE.
+  have [|r' r's rr'] := new1old r; first by rewrite ?inE -leqNgt r_ge r_lt1.
+  by exists r'; rewrite // (connect_trans yr rr').
++ by rewrite seen2E {1}seen1E nexts_split setUA.
 Qed.
 
 Lemma dfs1P dfs x e (A := [set y in successors x]):
@@ -463,9 +460,9 @@ rewrite seen_visit in seen1E *.
 have lt_sn_sn1 : sn e < sn e1.
   by rewrite (leq_trans _ (leq_sn subxe1))// seen_visit cardsU1 xNseen.
 have x_seen1 : x \in seen e1 by rewrite seen1E inE setU11.
+have x_stack : x \in stack e1.
+  by rewrite (subsetP (sub_stack subxe1))//= stack_visit// setU11.
 have [min_after|min_before] := leqP; last first.
-  have x_stack : x \in stack e1.
-    by rewrite (subsetP (sub_stack subxe1))//= stack_visit// setU11.
   constructor => //=.
     rewrite nexts1E bigmin_setU big_set1 /= inordK ?num1x ?ltnS ?max_card//.
     by rewrite (minn_idPr _)// ltnW.
