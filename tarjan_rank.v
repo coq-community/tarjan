@@ -1,7 +1,4 @@
-From mathcomp
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple.
-From mathcomp
-Require Import bigop finset finfun perm fingraph path div.
+From mathcomp Require Import all_ssreflect.
 Require Import extra.
 
 Set Implicit Arguments.
@@ -175,12 +172,12 @@ split => //=; last first.
   by rewrite mem_rcons !inE; case: eqP => //= _ /new_blacks.
 apply/setP=> y; rewrite !inE /cover bigcup_setU inE big_set1 !inE !negb_or.
 have [->|neq_xy] //= := altP (y =P x); rewrite ?(andbT, andbF).
-  case: splitP new_blacks s_uniq => //=; first by rewrite grays_stack.
+  case: path.splitP new_blacks s_uniq => //=; first by rewrite grays_stack.
   move=> s1 s2 s1x_blacks s_uniq; rewrite grays_sccsF // andbT.
   by rewrite (uniq_catRL s_uniq) // mem_cat mem_rcons mem_head.
 case: colorP; rewrite ?(andbT, andbF, orbT, orbF) //=.
   by move=> y_sccs; apply: contraTF y_sccs => /mem_drop; case: colorP.
-move=> y_blacks; case: splitP s_uniq; first by rewrite grays_stack.
+move=> y_blacks; case: path.splitP s_uniq; first by rewrite grays_stack.
 by move=> s1 s2 s_uniq y_in; apply: uniq_catRL.
 Qed.
 
@@ -198,7 +195,7 @@ Lemma grays_add_sccs e x :
   grays (add_sccs x e) = grays e :\ x.
 Proof.
 move=> /= se_uniq sb x_gray; rewrite /add_sccs /grays /=.
-case: splitP sb se_uniq; first by rewrite grays_stack.
+case: path.splitP sb se_uniq; first by rewrite grays_stack.
 move=> s s' sb sxs'_uniq.
 apply/setP=> y; rewrite !inE mem_cat mem_rcons in_cons.
 have [->|] //= := altP eqP; rewrite orbC ![(y \notin _) && _]andbC.

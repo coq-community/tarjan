@@ -1,7 +1,4 @@
-From mathcomp
-Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple.
-From mathcomp
-Require Import bigop finset finfun perm fingraph path div.
+From mathcomp Require Import all_ssreflect.
 Require Import bigmin extra.
 
 Set Implicit Arguments.
@@ -143,7 +140,7 @@ Lemma grays_add_sccs e x :
   grays (add_sccs x e) = grays e :\ x.
 Proof.
 move=> /= se_uniq sb x_gray; rewrite /add_sccs graysE /=.
-case: splitP sb se_uniq; first by rewrite grays_stack.
+case: path.splitP sb se_uniq; first by rewrite grays_stack.
 move=> s s' sb sxs'_uniq.
 apply/setP=> y; rewrite !inE mem_cat mem_rcons in_cons.
 have [->|] //= := altP eqP; rewrite orbC ![(y \notin _) && _]andbC.
@@ -259,12 +256,12 @@ split => //=; last first.
 move=> y; rewrite !inE /cover bigcup_setU inE big_set1 !inE !negb_or.
 rewrite graysE ?inE //.
 have [->|neq_xy] //= := altP (y =P x); rewrite ?(andbT, andbF).
-  case: splitP new_blacks s_uniq => //=; first by rewrite grays_stack.
+  case: path.splitP new_blacks s_uniq => //=; first by rewrite grays_stack.
   move=> s1 s2 s1x_blacks s_uniq; rewrite grays_sccsF // andbT.
   by rewrite (uniq_catRL s_uniq) // mem_cat mem_rcons mem_head.
 case: color4P; rewrite ?(andbT, andbF, orbT, orbF) //=.
   by move=> y_sccs; apply: contraTF y_sccs => /mem_drop; case: color4P.
-move=> y_blacks; case: splitP s_uniq; first by rewrite grays_stack.
+move=> y_blacks; case: path.splitP s_uniq; first by rewrite grays_stack.
 by move=> s1 s2 s_uniq y_in; apply: uniq_catRL.
 Qed.
 
@@ -399,7 +396,7 @@ split => [y|y|y||y z]; rewrite ?ffunE ?(inE) /=.
   by case:  (_ \in _); [rewrite eqxx | exact: nEc].
 - case: (boolP (_ \in _)); rewrite ?eqxx => // _; exact: nLs.
 - by rewrite grays_add_sccs ?wf_uniq // setUA /= [_ :|: [set x]]setUC setD1K.
-- case: (splitP (grays_stack x_g)) tsb pE (wf_uniq wf_c) =>
+- case: (path.splitP (grays_stack x_g)) tsb pE (wf_uniq wf_c) =>
     l1 l2 tsb pE Ul yIl2 zIl2.
   have yNIr : y \notin rcons l1 x by rewrite -(uniq_catRL Ul) // mem_cat orbC yIl2.
   have zNIr : z \notin rcons l1 x by rewrite -(uniq_catRL Ul) // mem_cat orbC zIl2.
@@ -975,7 +972,7 @@ split=> //.
         by apply: contra => /eqP<-.
   + split=> //=; rewrite ?grays_add_sccs ?stack_add_sccs ?take_s ?drop_s// ?g1Nx.
     * move=> y z y_g z_s; rewrite !ffunE; rewrite !ifN /=; last 2 first.
-      - case: (splitP x_stack) take_s drop_s e1_uniq 
+      - case: (path.splitP x_stack) take_s drop_s e1_uniq 
            => l1 l2 -> -> /uniq_catRL<-//.
         by rewrite mem_cat orbC z_s.
       - rewrite mem_rcons inE negb_or.
@@ -986,7 +983,7 @@ split=> //.
           by move: y_g; rewrite -g1Nx !inE; case/andP.
         by rewrite s_def mem_cat stack_add_stack inE z_s !orbT.
      * move=> y y_s; rewrite !ffunE /= ifN; last first.
-         case: (splitP x_stack) take_s drop_s e1_uniq 
+         case: (path.splitP x_stack) take_s drop_s e1_uniq 
              => l1 l2 -> -> /uniq_catRL<-//.
          by rewrite mem_cat orbC y_s.
        have y_s1 : y \in stack e1.
