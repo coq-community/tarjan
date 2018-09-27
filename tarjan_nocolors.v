@@ -224,7 +224,7 @@ Lemma wf_visit e x : wf_env e ->
    (forall y, num e y < sn e -> gconnect y x) ->
    x \notin seen e -> wf_env (visit x e).
 Proof.
-move=> e_wf x_connected xNseen; constructor=> [|y|y|y] //=; rewrite ?inE ?ffunE/=.
+move=> e_wf x_connected xNseen; constructor=> [|y|y|y|] //=; rewrite ?inE ?ffunE/=.
 - exact: sub_gsccs.
 - by case: ifP; rewrite ?max_num// leqW ?max_card.
 - rewrite seen_visit cardsU1 xNseen; case: ifPn => // _.
