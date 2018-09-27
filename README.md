@@ -12,6 +12,10 @@ Tarjan and Kosaraju
 ## Proof of Kosaraju strongly connected component algorithm
 * Kosaraju.v: proof of Kosaraju connected component algorithm
 
+## Extra library files
+* bigmin.v: extra library to deal with \min(i in A) F i
+* extra.v: naive definitions of strongly connected components and various basic extentions of mathcomp libraries on paths and fintypes.
+
 # Authors:
 
 Cyril Cohen, Jean-Jacques Lévy and Laurent Théry
