@@ -8,6 +8,7 @@ Tarjan and Kosaraju
 * `tarjan_rank_bigmin.v` *(806 sloc)*: same proof but with a `\min_` instead of multiple inequalities on the output rank
 * `tarjan_num.v` *(1029 sloc)*: same proof as `tarjan_rank_bigmin.v` but with serial numbers instead of ranks
 * `tarjan_nocolor.v` *(548 sloc)*: new proof, with ranks and without colors, less fields in environement and less invariants, preconditions and postconditions.
+* `tarjan_nocolor_optim.v` *(560 sloc)*: same proof as `tarjan_nocolor.v`, but with the serial number field of the environement restored, and passing around stack extensions as sets.
 
 ## Proof of Kosaraju strongly connected component algorithm
 * `Kosaraju.v` *(679 sloc)*: proof of Kosaraju connected component algorithm
