@@ -29,7 +29,7 @@ Definition store scc e :=
 
 Definition dfs1 dfs x e :=
     let: (m1, e1) as res := dfs [set y in successors x] (visit x e) in
-    if m1 >= sn e then (#|V|, store (new_stack e e1) e1) else res.
+    if m1 < sn e then res else (#|V|, store (new_stack e e1) e1).
 
 Definition dfs dfs1 dfs (roots : {set V}) e :=
   if [pick x in roots] isn't Some x then (#|V|, e) else

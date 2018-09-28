@@ -36,7 +36,7 @@ Definition add_sccs x e :=
 
 Definition dfs1 (dfs : {set V} -> env -> nat * env) (x : V) e :=
     let: (m1, e1) := dfs [set y in successors x] (add_stack x e) in
-    if m1 >= sn e then (infty, add_sccs x e1) else (m1, add_blacks x e1).
+    if m1 < sn e then (m1, add_blacks x e1) else (infty, add_sccs x e1).
 
 Definition dfs dfs1 dfs (roots : {set V}) e :=
   if [pick x in roots] isn't Some x then (infty, e)
