@@ -457,7 +457,7 @@ Definition noblack_to_white e :=
   forall x, x \in black e -> [disjoint successors x & white e].
 
 Record wf_graph e := WfGraph {
-  wf_gray_to_stack : {in gray e & stack e, forall x y,
+  wf_stack_to_stack : {in stack e &, forall x y,
          (num e x <= num e y) -> gconnect x y};
   wf_stack_to_gray : forall y, y \in stack e ->
                       exists x, [/\ x \in gray e,
@@ -487,11 +487,13 @@ Lemma add_stack_gwf e w :
   wf_graph (add_stack w e).
 Proof.
 move=> gray_to e_cwf e_nwf w_white [gs sg]; split.
-  rewrite gray_add_stack //= => x y. rewrite !ffunE !inE /=.
-  have [-> _|neq_xw /= x_gray] := altP eqP;
+  move => x y. rewrite !ffunE !inE /=.
+  have [-> _|neq_xw /= x_stack] := altP eqP;
   have [-> _|neq_yw /= y_stack]// := altP eqP.
   - by rewrite leqNgt wf_num_lt// stack_neq_infty.
-  - by move=> _; rewrite gray_to ?inE.
+  - case/sg: x_stack => z [/gray_to zCs _ xCz] _.
+    apply: connect_trans (zCs _ _) => //.
+    by rewrite !inE. 
   - exact: gs.
 move=> y; rewrite inE => /predU1P [->|].
   by exists w; rewrite ?gray_add_stack ?inE ?eqxx.
@@ -807,14 +809,14 @@ have x_gray : x \in gray e1.
 have sx_subscc : is_subscc [set y in rcons s x].
   apply: (@is_subscc1 x); first by rewrite inE mem_rcons mem_head.
   move=> y; rewrite !inE mem_rcons in_cons => /predU1P [->//|y_s]; split.
-    apply: (@wf_gray_to_stack e1) => //; first by rewrite s_def mem_cat y_s.
+    apply: (@wf_stack_to_stack e1) => //; first by rewrite s_def mem_cat y_s.
     rewrite wf_num_stack //s_def; last by rewrite mem_cat y_s.
     rewrite !index_cat y_s ifN.
       by rewrite (leq_trans (index_size _ _) (leq_addr _ _)).
     by apply/negP=> /(subsetP sb); case: color4P x_gray.    
   have [] := @wf_stack_to_gray _ e1_gwf y; first by rewrite s_def mem_cat y_s.
   move=> z [z_gray rank_z] /connect_trans; apply.
-  by rewrite (@wf_gray_to_stack e1) //; rewrite (subenv_gray_le sube1).
+  by rewrite (@wf_stack_to_stack e1) ?gray_stack //; rewrite (subenv_gray_le sube1).
 have wreachex : wreach e x = x |: \bigcup_(y in [set y in successors x])
                           wreach (add_stack x e) y.
   rewrite /wreach white_add_stack.
@@ -878,9 +880,8 @@ case: ltnP => [m1_small|m1_big] //=.
       * by rewrite /= gray_add_black wf_sn// setUCA setUA setD1K.
       * by move=> y z /= y_stack z_stack; rewrite wf_num_stack.
     + split => //.
-        move=> y z /=; rewrite gray_add_black => y_gray z_stack.
-        apply: wf_gray_to_stack => //; apply: subsetP y_gray.
-        by rewrite subD1set.
+        move=> y z /= y_stack z_stack.
+        by apply: wf_stack_to_stack.
       move=> y /= y_stack; rewrite gray_add_black.
       have [z] // := wf_stack_to_gray e1_gwf y_stack.
       have [->{z} [_ rank_x y_to_x]|] := eqVneq z x; last first.
@@ -904,7 +905,7 @@ case: ltnP => [m1_small|m1_big] //=.
       rewrite eq_yx in y_scc.
       have x'_scc : (x' \in scc).
         rewrite -(def_scc _ y_scc) // mem_scc /= x_to_x' /=.
-        by rewrite (wf_gray_to_stack e1_gwf) // ltnW.
+        by rewrite (wf_stack_to_stack e1_gwf) ?gray_stack // ltnW.
       have /scc_sub := x'_scc.
       rewrite !inE (negPf neq_x'x) /=.
       by case: color4P x'_gray.
@@ -1016,17 +1017,15 @@ split=> //.
       - move: xe_uniq; rewrite /= andbC => /andP[_].
         by apply: contra => /eqP<-.
   + split=> //=; rewrite ?gray_add_sccs ?stack_add_sccs ?take_s ?drop_s// ?g1Nx.
-    * move=> y z y_g z_s; rewrite !ffunE; rewrite !ifN /=; last 2 first.
+    * move=> y z y_s z_s; rewrite !ffunE !ifN /=; last 2 first.
       - case: (splitP x_stack) take_s drop_s e1_uniq 
            => l1 l2 -> -> /uniq_catRL<-//.
         by rewrite mem_cat orbC z_s.
-      - rewrite mem_rcons inE negb_or.
-        case: eqP y_g => [->|_ y_g /=]; first by case: color4P x_white.
-        apply/negP =>/(subsetP sb)=> y_b.
-        by move: y_g; rewrite -g1Nx !inE andbC; case: color4P y_b.
-      - apply: wf_gray_to_stack => //.
-          by move: y_g; rewrite -g1Nx !inE; case/andP.
-        by rewrite s_def mem_cat stack_add_stack inE z_s !orbT.
+      - case: (splitP x_stack) take_s drop_s e1_uniq 
+           => l1 l2 -> -> /uniq_catRL<-//.
+        by rewrite mem_cat orbC y_s.
+      - by apply: wf_stack_to_stack => //;
+           rewrite s_def mem_cat stack_add_stack inE !(y_s , z_s) !orbT.
      * move=> y y_s; rewrite !ffunE /= ifN; last first.
          case: (splitP x_stack) take_s drop_s e1_uniq 
              => l1 l2 -> -> /uniq_catRL<-//.
