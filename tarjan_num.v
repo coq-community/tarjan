@@ -414,10 +414,14 @@ Definition noblack_to_white e :=
 Inductive wf_graph e := WfGraph {
   wf_stack_to_stack : {in stack e &, forall x y,
          (num e x <= num e y) -> gconnect x y};
-  wf_stack_to_gray  : forall y, y \in stack e ->
+  wf_stack_to_gray  : {in stack e, forall y,
                       exists x, [/\ x \in gray e,
-     (num e x <= num e y) & gconnect y x]
+     (num e x <= num e y) & gconnect y x]}
   }.
+
+Goal forall e (v : V), wf_graph e -> False.
+move=> e v [H1 H2].
+have := H2 v.
 
 Definition access_to e (roots : {set V}) :=
   {in gray e & roots, forall x y, gconnect x y}.
