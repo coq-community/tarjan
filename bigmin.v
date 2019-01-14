@@ -102,7 +102,7 @@ Implicit Type (F : I -> 'I_n.+1).
 Lemma geq_bigmin_cond (P : pred I) F i0 :
   P i0 -> F i0 >= \min_(i | P i) F i.
 Proof. by move=> Pi0; rewrite (bigD1 i0) //= geq_minl. Qed.
-Implicit Arguments geq_bigmin_cond [P F].
+Arguments geq_bigmin_cond [P F].
 
 Lemma geq_bigmin F (i0 : I) : F i0 >= \min_i F i.
 Proof. exact: geq_bigmin_cond. Qed.
@@ -151,9 +151,9 @@ by apply/bigmin_geqP=> i; rewrite inE => /andP[iA iB]; rewrite (bigmin_inf iB).
 Qed.
 
 End extra_bigmin.
-Implicit Arguments geq_bigmin_cond [I P F].
-Implicit Arguments geq_bigmin [I F].
-Implicit Arguments bigmin_geqP [n I P m F].
-Implicit Arguments bigmin_inf [I P m F].
-Implicit Arguments bigmin_eq_arg [I P F].
+Arguments geq_bigmin_cond _ [I P F].
+Arguments geq_bigmin _ [I F].
+Arguments bigmin_geqP [n I P m F].
+Arguments bigmin_inf _ [I _ P m F].
+Arguments bigmin_eq_arg _ [I _ P F].
 
