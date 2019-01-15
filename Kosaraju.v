@@ -465,24 +465,6 @@ Qed.
 
 End ConnectRelto.
 
-Section Stack.
-
-Variable r : rel T.
-
-Local Notation "x -[ l ]-> y" :=
-  (connect  (rel_of_simpl_rel (relto l r)) x y)
-  (at level 10, format "x  -[ l ]->  y").
-Local Notation "x -[]-> y" := (connect r x y)
-  (at level 10, format "x  -[]->  y").
-Local Notation "x =[ l ]= y" := (symconnect (relto l r) x y)
-  (at level 10, format "x  =[ l ]=  y").
-Local Notation "x =[]= y" := (symconnect r x y)
-  (at level 10, format "x  =[]=  y").
-Local Notation "TS[ a , l ]" := (tsorted r a l)
-  (at level 10, format "TS[ a ,  l ]").
-Local Notation "TS[ l ]" := (tsorted r (pred_of_simpl predT) l)
-  (at level 10, format "TS[ l ]").
-
 Section Pdfs.
 
 Variable g : T -> seq T.
@@ -495,12 +477,27 @@ Fixpoint rpdfs m (p : {set T} * seq T) x :=
 
 Definition pdfs := rpdfs #|T|.
 
-End Pdfs.
+(* Building the topologically-ordered sequence of all nodes *)
+Definition tseq := (foldl pdfs (setT, [::]) (enum T)).2.
+
+Local Notation "x -[ l ]-> y" :=
+  (connect (rel_of_simpl_rel (relto l (grel g))) x y)
+  (at level 10, format "x  -[ l ]->  y").
+Local Notation "x -[]-> y" := (connect (grel g) x y)
+  (at level 10, format "x  -[]->  y").
+Local Notation "x =[ l ]= y" := (symconnect (relto l (grel g)) x y)
+  (at level 10, format "x  =[ l ]=  y").
+Local Notation "x =[]= y" := (symconnect (grel g) x y)
+  (at level 10, format "x  =[]=  y").
+Local Notation "TS[ a , l ]" := (tsorted (grel g) a l)
+  (at level 10, format "TS[ a ,  l ]").
+Local Notation "TS[ l ]" := (tsorted (grel g) (pred_of_simpl predT) l)
+  (at level 10, format "TS[ l ]").
 
 Lemma pdfs_correct (p : {set T} * seq T) x :
   let (s, l) := p in
   uniq l /\  {subset l <= ~: s} ->
-  let p1 := pdfs (rgraph r) p x in
+  let p1 := pdfs p x in
   let (s1, l1) := p1 in
   if x \notin s then p1 = p else
        [/\ #|s1| <= #|s| & uniq l1]
@@ -516,7 +513,7 @@ elim: #|T| x p => /= [x [s l]|n IH x [s l]]/=.
   rewrite leqn0 => /eqP/cards0_eq-> [HUl HS].
   by rewrite inE.
 have [xIs Hl [HUl HS]/=|xNIs Hl [HUl HS]//] := boolP (x \in s).
-set p := (_, l); set F := rpdfs _ _; set L := rgraph _ _.
+set p := (_, l); set F := rpdfs _; set L := g _.
 have:
      [/\ #|p.1| < #|s| & uniq p.2]
   /\
@@ -532,10 +529,9 @@ have:
   - by rewrite !inE eqxx.
   - by rewrite setD0.
   by exact: tsorted_nil.
-have: forall y, r x y -> (y \notin p.1) || (y \in L).
-  by move=> y; rewrite [_ \in rgraph _ _]rgraphK orbC => ->.
-have: forall y, (y \in L) -> r x y.
-  by move=> y; rewrite [_ \in rgraph _ _]rgraphK.
+have: forall y, (grel g) x y -> (y \notin p.1) || (y \in L).
+  by move => y; rewrite /= orbC => ->.
+have: forall y, (y \in L) -> (grel g) x y by move=> y.
 rewrite {}/p.
 elim: L (_, _) => /=
     [[s1 l1] /= _ yIp [[sSs1 Ul1] [l2 [xIs1 s1E l1E Rwl2 xCy]]]|
@@ -554,7 +550,7 @@ elim: L (_, _) => /=
   - by rewrite l1E.
   - apply: tsorted_cons_r => // [y yInl2|y /yIp].
     rewrite connect_to_C1_id
-           (eq_connect (_ : _ =2 (relto [predD1 s & x] r))) ?xCy //.
+           (eq_connect (_ : _ =2 (relto [predD1 s & x] (grel g)))) ?xCy //.
       by move=> x1 y1; rewrite /= !inE andbA.
     rewrite orbF s1E 3!inE negb_and => /orP[]; first by rewrite negbK.
     by rewrite !inE negb_and => /orP[] /negPf->.
@@ -601,7 +597,7 @@ Qed.
 
 Lemma pdfs_connect s x :
   x \in s ->
-  let (s1, l1) := pdfs (rgraph r) (s, [::]) x in
+  let (s1, l1) := pdfs (s, [::]) x in
   [/\ uniq l1, s1 = s :\: [set x in l1], l1 \subset s &
       forall y, y \in l1 = x -[[pred u in s]]-> y].
 Proof.
@@ -620,10 +616,6 @@ apply/idP/idP => [|H].
 rewrite l1E cats0.
 by have [_ /(_ x y xIl2 H)] := WH.
 Qed.
-
-(* Building the topologically-ordered sequence of all nodes *)
-Definition tseq :=
-  (foldl (pdfs (rgraph r)) (setT, [::]) (enum T)).2.
 
 (* The sequence is topologically sorted and contains all the nodes *)
 Lemma tseq_correct : TS[tseq] /\ forall x, x \in tseq.
@@ -662,7 +654,85 @@ rewrite inE => /orP[/eqP->|//]; last exact: FI.
 by apply: Sl2F; rewrite l2E mem_cat yIl3.
 Qed.
 
-End Stack.
+Lemma pdfs_uniq s l x :
+  uniq l -> {subset l <= ~: s} -> uniq (pdfs (s,l) x).2.
+Proof.
+move => Hu Hs.
+have Hus: uniq l /\ {subset l <= ~: s} by [].
+have Hpc := pdfs_correct (s,l) x Hus.
+move: Hpc; rewrite /=.
+set f := pdfs _ _.
+case: f => s' l'.
+case: ifP => //=.
+- by move => Hx; case => Hs'; move =>->.
+- by move => Hx [[Hs' Hu'] He].
+Qed.
+
+Lemma pdfs_subset s l s' l' x :
+  uniq l -> {subset l <= ~: s} ->
+  pdfs (s,l) x = (s', l') ->
+  {subset l' <= ~: s'}.
+Proof.
+move => Hu Hs Hp.
+have Hus: uniq l /\ {subset l <= ~: s} by [].
+have Hpc := pdfs_correct (s,l) x Hus.
+move: Hpc; rewrite /= Hp.
+case: ifP => Hx; first by case =>->->.
+move => [Hu' [l2 Hl2]].
+case: Hl2 => Hxl2 Hs' Hl' Hts Hc.
+rewrite Hs' Hl' => y.
+rewrite mem_cat; move/orP; case.
+- move => Hy.
+  apply/setCP.
+  move/setDP => [Hy' Hsy].
+  move/negP: Hsy; case.
+  by rewrite inE.
+- move => Hy.
+  apply/setCP.
+  case; move/setDP => [Hy' Hsy].
+  by move/setCP: (Hs _ Hy).
+Qed.
+
+Lemma foldr_pdfs_subset l0 (s : {set T}) l s' l' :
+  uniq l -> {subset l <= ~: s} ->
+  foldr (fun x : T => (pdfs)^~ x) (s, l) l0 = (s', l') ->
+  uniq l' /\ {subset l' <= ~: s'}.
+Proof.
+elim: l0 s l s' l' => //=; first by move => s l' s' l0 Hu Hs; case =><-<-.
+move => x l IH s l0 s' l' Hl0 Hs.
+set f := foldr _ _ _.
+case Hf: f.
+have [Hb Ha] := IH _ _ _ _ Hl0 Hs Hf.
+have Hu := pdfs_uniq x Hb Ha.
+move => Hp.
+rewrite Hp /= in Hu.
+split => //.
+move: Hp.
+exact: pdfs_subset.
+Qed.
+
+Lemma tseq_uniq : uniq tseq.
+Proof.
+rewrite /tseq.
+set l := enum T.
+have ->: l = rev (rev l) by rewrite revK.
+rewrite foldl_rev.
+have Hu: uniq (rev l) by rewrite rev_uniq; apply: enum_uniq.
+move: Hu.
+set l' := rev l.
+move: l' => {l}.
+elim => //=.
+move => x l IH.
+move/andP => [Hx Hul].
+set f' := foldr _ _ _.
+case Hf': f'.
+have Hue: @uniq T [::] by [].
+have Hss: {subset [::] <= ~: [set: T]} by [].
+have [Huf Hus] := foldr_pdfs_subset Hue Hss Hf'.
+exact: pdfs_uniq.
+Qed.
+
+End Pdfs.
 
 Variable r : rel T.
 
@@ -670,29 +740,40 @@ Definition kosaraju :=
   let f := pdfs (rgraph [rel x y | r y x]) in
   (foldl  (fun (p : {set T} * seq (seq T)) x => if x \notin p.1 then p else
                       let p1 := f (p.1, [::]) x in  (p1.1, p1.2 :: p.2))
-          (setT, [::]) (tseq r)).2.
+          (setT, [::]) (tseq (rgraph r))).2.
 
 Lemma kosaraju_correct :
-    let l := flatten kosaraju in
- [/\ uniq l, forall i, i \in l &
+  let l := flatten kosaraju in
+  [/\ uniq l, forall i, i \in l &
      forall c : seq T, c \in kosaraju ->
-        exists x, forall y, (y \in c) = (connect r x y && connect r y x)].
+      exists x, forall y, (y \in c) = symconnect r x y].
 Proof.
 rewrite /kosaraju.
 set f := pdfs (rgraph [rel x y | r y x]).
 set g := fun p x => if _ then _ else _.
 set p := (_, _).
 have: uniq (flatten p.2) by [].
-have: forall c, c \in (flatten p.2) ++ (tseq r).
-  by move=>c; case: (tseq_correct r) => _ /(_ c).
+have: forall c, c \in (flatten p.2) ++ (tseq (rgraph r)).
+  by move=>c; case: (tseq_correct (rgraph r)) => _ /(_ c).
 have: forall c, c \in p.2 ->
                 exists x, c =i (symconnect (relto predT r) x) by [].
 have: ~: p.1 =i flatten p.2.
  by move=> i; rewrite !inE in_nil.
-have: tsorted r (predT : pred T) [seq i <- tseq r | i \in p.1].
-  have->: [seq i <- tseq r | i \in p.1] = tseq r.
+have: tsorted r (predT : pred T) [seq i <- tseq (rgraph r) | i \in p.1].
+  have->: [seq i <- tseq (rgraph r) | i \in p.1] = tseq (rgraph r).
     by apply/all_filterP/allP=> y; rewrite inE.
-  by case: (tseq_correct r).
+  have Hc: connect (relto predT r) =2 connect (relto predT (grel (rgraph r))).
+    by apply: eq_connect => x y; rewrite /= /rgraph /= mem_enum.
+  case: (tseq_correct (rgraph r)).
+  move => [Hs Ht Ht'] _; split => //.
+    by move => x y Hx Hc0; apply (Ht _ _ Hx); rewrite -Hc.
+  move => x y Hx; rewrite Hc => Hc0; move: (Ht' _ _ Hx Hc0).
+  rewrite /before /= /can_to.
+  set f1 := symconnect _ _.
+  set f2 := symconnect _ _.
+  rewrite (@eq_find _ f1 f2) //; move => z; rewrite /f1 /f2.
+  apply: eq_symconnect => x0 y0.
+  by rewrite /relto /= /rgraph mem_enum.
 elim: tseq p => [[s l]/= HR HI HE HFI HUF|].
   split=> // i.
   by have := HFI i; rewrite cats0.
@@ -702,12 +783,18 @@ have [xIs1|xNIs1] := boolP (x \in s1); last first.
   apply: IH => //= [|i]; first by move: HR; rewrite /= (negPf xNIs1).
   have:= HFI i; rewrite !mem_cat inE /=.
   by case: eqP => //->; rewrite -HI !inE xNIs1.
-have := (@pdfs_connect ([rel x y | r y x]) s1 x xIs1).
+have := (@pdfs_connect (rgraph [rel x y | r y x]) s1 x xIs1).
 case: pdfs => s2 l2 /= [Ul2 s2E Dl2 xCy].
 move: HR; rewrite /= xIs1; set L := [seq _ <- _ | _] => HR.
 have l2R : l2 =i (symconnect r x).
-  move=> y.
-  rewrite xCy -(@connect_to_rev r L setT) //.
+  move=> y; rewrite xCy.
+  set re := [rel x0 y0 | _].
+  set r2 := relto [pred u in s1] re.
+  set c1 := connect _ _ _.
+  have ->: c1 = connect r2 x y.
+    apply: eq_connect => x0 y0.
+    by rewrite /relto /= /rgraph /= mem_enum.
+  rewrite -(@connect_to_rev r L setT) //.
   - rewrite -tsorted_symconnect //.
       rewrite -topredE /=.
       by apply: eq_symconnect => i j; rewrite /= !inE.
