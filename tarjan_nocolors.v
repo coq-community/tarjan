@@ -133,7 +133,7 @@ Proof.
 move=> xA; apply/setP=> y; apply/idP/idP; last first.
   rewrite nexts1 !inE xA; case: (_ == _); rewrite //=.
   by apply: subsetP; rewrite sub_nexts// subsetDl.
-move=> /bigcupP[z]; rewrite !inE => /eqP[{z}->].
+move=> /bigcupP[z]; rewrite !inE => /eqP {z}->.
 move=> /connectP[p /shortenP[[_ _ _ /eqP->//|z q/=/andP[/andP[_ xz]]]]].
 rewrite path_from => /andP[zq] /allP/= qA.
 move=> /and3P[xNzq _ _] _ ->; apply/orP; right.
@@ -619,6 +619,6 @@ by congr (Env _ _) => //; apply/ffunP=> x; rewrite ffunE.
 Qed.
 
 Theorem tarjan_correct : tarjan = gsccs.
-Proof. by rewrite /tarjan; have [->] := tarjan_recP. Qed.
+Proof. by rewrite /tarjan; have -> := tarjan_recP. Qed.
 
 End tarjan.

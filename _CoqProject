@@ -1,4 +1,5 @@
 -R . mathcomp.tarjan
+-arg -w -arg -notation-overridden
 
 tarjan_num.v
 tarjan_nocolors.v
