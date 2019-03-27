@@ -8,7 +8,7 @@ Unset Printing Implicit Defensive.
 Section tarjan.
 
 Variable (V : finType) (successors : V -> seq V).
-Notation infty := #|V|.+1.
+Notation infty := #|V|.
 
 (*************************************************************)
 (*               Tarjan 72 algorithm,                        *)
@@ -17,7 +17,7 @@ Notation infty := #|V|.+1.
 
 Record env := Env {esccs : {set {set V}}; num: {ffun V -> nat}}.
 
-Definition visited e := [set x | num e x < infty].
+Definition visited e := [set x | num e x < infty.+1].
 Notation sn e := #|visited e|.
 Definition stack e := [set x | num e x < sn e].
 Notation new_stack e1 e2 := (stack e2 :\: stack e1).
@@ -25,24 +25,23 @@ Notation new_stack e1 e2 := (stack e2 :\: stack e1).
 Definition visit x e :=
   Env (esccs e) (finfun [eta num e with x |-> sn e]).
 Definition store scc e :=
-  Env (scc |: esccs e) [ffun x => if x \in scc then #|V| else num e x].
+  Env (scc |: esccs e) [ffun x => if x \in scc then infty else num e x].
 
 Definition dfs1 dfs x e :=
     let: (m1, e1) as res := dfs [set y in successors x] (visit x e) in
-    if m1 < sn e then res else (#|V|, store (new_stack e e1) e1).
+    if m1 < sn e then res else (infty, store (new_stack e e1) e1).
 
 Definition dfs dfs1 dfs (roots : {set V}) e :=
-  if [pick x in roots] isn't Some x then (#|V|, e) else
-  let: (m1, e1) := if num e x != infty then (num e x, e) else dfs1 x e in
+  if [pick x in roots] isn't Some x then (infty, e) else
+  let: (m1, e1) := if num e x != infty.+1 then (num e x, e) else dfs1 x e in
   let: (m2, e2) := dfs (roots :\ x) e1 in (minn m1 m2, e2).
 
-Fixpoint tarjan_rec n :=
-  if n is n.+1 then dfs (dfs1 (tarjan_rec n)) (tarjan_rec n)
-  else fun r e => (#|V|, e).
+Fixpoint tarjan_rec k :=
+  if k is k.+1 then dfs (dfs1 (tarjan_rec k)) (tarjan_rec k)
+  else fun r e => (infty, e).
 
-Let N := #|V| * #|V|.+1 + #|V|.
-Definition e0 := (Env set0 [ffun _ => infty]).
-Definition tarjan := esccs (tarjan_rec N setT e0).2.
+Definition e0 := (Env set0 [ffun _ => infty.+1]).
+Definition tarjan := esccs (tarjan_rec (infty * infty.+1 + infty) setT e0).2.
 
 (*****************)
 (* Abbreviations *)
@@ -147,7 +146,7 @@ Qed.
 (* Well formed env *)
 (*******************)
 
-Lemma num_lt_infty e x : num e x < infty = (x \in visited e).
+Lemma num_lt_infty e x : num e x < infty.+1 = (x \in visited e).
 Proof. by rewrite inE. Qed.
 
 Lemma num_lt_sn e x : num e x < sn e = (x \in stack e).
@@ -172,18 +171,18 @@ Section wfenv.
 
 Record wf_env e := WfEnv {
   sub_gsccs : esccs e \subset gsccs;
-  max_num : forall x, num e x <= infty;
-  num_lt_V_is_stack : forall x, num e x < #|V| -> num e x < sn e;
-  num_sccs : forall x, (num e x == #|V|) = (x \in cover (esccs e));
+  max_num : forall x, num e x <= infty.+1;
+  num_lt_V_is_stack : forall x, num e x < infty -> num e x < sn e;
+  num_sccs : forall x, (num e x == infty) = (x \in cover (esccs e));
   le_connect : forall x y, num e x <= num e y < sn e -> gconnect x y;
 }.
 
 Variables (e : env) (e_wf : wf_env e).
 
-Lemma notvisited_num x : x \notin visited e -> num e x = infty.
+Lemma notvisited_num x : x \notin visited e -> num e x = infty.+1.
 Proof. by rewrite inE ltn_neqAle max_num// andbT negbK => /eqP. Qed.
 
-Lemma num_lt_V x : (num e x < #|V|) = (num e x < sn e).
+Lemma num_lt_V x : (num e x < infty) = (num e x < sn e).
 Proof.
 apply/idP/idP => [/num_lt_V_is_stack//|]; first exact.
 by move=> /leq_trans; apply; rewrite max_card.
@@ -244,13 +243,13 @@ Qed.
 
 Definition subenv e1 e2 := [&&
   esccs e1 \subset esccs e2,
-  [forall x, (num e1 x < infty) ==> (num e2 x == num e1 x)] &
+  [forall x, (num e1 x < infty.+1) ==> (num e2 x == num e1 x)] &
   [forall x, (num e2 x < sn e1) ==> (num e1 x < sn e1)]].
 
 Lemma sub_sccs e1 e2 : subenv e1 e2 -> esccs e1 \subset esccs e2.
 Proof. by move=> /and3P[]. Qed.
 
-Lemma sub_snum e1 e2 : subenv e1 e2 -> forall x, num e1 x < infty -> num e2 x = num e1 x.
+Lemma sub_snum e1 e2 : subenv e1 e2 -> forall x, num e1 x < infty.+1 -> num e2 x = num e1 x.
 Proof. by move=> /and3P[_ /forall_inP /(_ _ _) /eqP]. Qed.
 
 Lemma sub_vnum e1 e2 : subenv e1 e2 -> forall x, num e1 x < sn e1 -> num e2 x = num e1 x.
@@ -352,11 +351,11 @@ Definition outenv (roots : {set V}) (e e' : env) := [/\
   visited e' = visited e :|: nexts (~: visited e) roots ].
 
 Variant dfs_spec_def (dfs : nat * env) (roots : {set V}) e :
-  (nat * env) -> nat -> env -> Type := DfsSpec me' m e' of
-    me' = (m, e') &
-    m = val (\min_(x in nexts (~:visited e) roots) @inord #|V| (num e' x)) &
+  (nat * env) -> nat -> env -> Type := DfsSpec ne' n e' of
+    ne' = (n, e') &
+    n = val (\min_(x in nexts (~:visited e) roots) @inord infty (num e' x)) &
     wf_env e' & subenv e e' & outenv roots e e' :
-  dfs_spec_def dfs roots e me' m e'.
+  dfs_spec_def dfs roots e ne' n e'.
 Notation dfs_spec dfs roots e := (dfs_spec_def dfs roots e dfs dfs.1 dfs.2).
 
 Definition dfs_correct dfs (roots : {set V}) e := wf_env e ->
@@ -381,7 +380,7 @@ case: pickP => /= [x x_roots|]; last first.
     rewrite ?setDv ?r_eq0 ?nexts0 ?sub0set ?eqxx ?setU0 ?big_set0 //=;
     by move=> ?; rewrite inE.
 have [numx_infty|numx_ninfty]/= := altP eqP; last first.
-  have numx_lt : num e x < infty by rewrite ltn_neqAle numx_ninfty max_num.
+  have numx_lt : num e x < infty.+1 by rewrite ltn_neqAle numx_ninfty max_num.
   have x_visited : x \in visited e by rewrite inE.
   case: dfsP => //= [u v ve|_ _ e1 -> -> e1_wf subee1 [new1c new1old visited1E]].
     by rewrite inE => /andP[_ v_roots]; rewrite roots_connected.
@@ -435,7 +434,7 @@ Lemma dfs1P dfs x e (A := [set y in successors x]):
 Proof.
 rewrite /dfs1 => dfsP e_wf xNvisited x_connected.
 have subexe: subenv e (visit x e) by exact: sub_visit.
-have num0x : num e x = infty by apply: notvisited_num.
+have num0x : num e x = infty.+1 by apply: notvisited_num.
 have xNstack : x \notin stack e.
   by rewrite inE num0x ltnNge leqW// max_card.
 have xe_wf : wf_env (visit x e).
@@ -473,7 +472,7 @@ have [min_after|min_before] := leqP; last first.
     by rewrite visited_visit !ffunE /= eqxx cardsU1 xNvisited add1n !ltnS leqnn.
   move=> y; have [v ve xv] : exists2 v, v \in stack e & gconnect x v.
     have [|v] := @eq_bigmin_cond _ _ (mem (nexts (~: (x |: visited e)) A))
-                               (@inord #|V| \o (num e1)).
+                               (@inord infty \o (num e1)).
       rewrite card_gt0; apply: contraTneq min_before => ->.
       by rewrite big_set0 -leqNgt max_card.
     rewrite !inE => v_in min_is_v; move: min_before; rewrite min_is_v/=.
@@ -489,8 +488,8 @@ have [min_after|min_before] := leqP; last first.
   move=> /predU1P[->|]; last by exists z.
   by move=> yx; exists v; rewrite // (connect_trans yx).
 have all_geq y : y \in nexts (~: visited e) [set x] ->
-  (#|visited e| <= num e1 y) * (num e1 y < infty).
-  have := min_after; have sn_inord : sn e = @inord #|V| (sn e).
+  (#|visited e| <= num e1 y) * (num e1 y < infty.+1).
+  have := min_after; have sn_inord : sn e = @inord infty (sn e).
     by rewrite inordK// ltnS max_card.
   rewrite {1}sn_inord; move/bigmin_geqP => /(_ y) y_ge.
   rewrite nexts1E !inE => /predU1P[->|yA]; rewrite ?num1x.
@@ -499,7 +498,7 @@ have all_geq y : y \in nexts (~: visited e) [set x] ->
   by rewrite num_lt_infty visited1E 2!inE yA orbT.
 constructor => //=.
 - rewrite big1// => y xy; rewrite ffunE new_stackE ?inE//=.
-  have y_visited1 : num e1 y < infty.
+  have y_visited1 : num e1 y < infty.+1.
     by rewrite num_lt_infty visited1E -setUA setUCA -nexts1E inE xy orbT.
   apply/val_inj=> /=; case: ifPn; rewrite ?inordK//.
   rewrite all_geq//= -num_lt_V// -leqNgt; move: y_visited1; rewrite ltnS.
@@ -538,7 +537,7 @@ constructor => //=.
     have zNvisited : z \notin visited e.
       rewrite inE -leqNgt ltn_neqAle eq_sym num_sccs// zNstack andbT.
       apply: contraTN isT => /(zNcover _ e_wf).
-      by rewrite -num_sccs// num0x; elim: #|V|.
+      by rewrite -num_sccs// num0x; elim: infty.
     move: eq_yz; rewrite zNvisited /= => /andP[/eqP eq_yz _].
     rewrite -eq_yz in zNstack z_stack.
     by rewrite !inE -num_lt_V// -leqNgt zNstack.
@@ -562,20 +561,20 @@ constructor => //=.
   by rewrite visited1E -setUA setUCA -nexts1E.
 Qed.
 
-Theorem tarjan_rec_term n (roots : {set V}) e :
-  n >= #|~: visited e| * #|V|.+1 + #|roots| ->
-  dfs_correct (tarjan_rec n) roots e.
+Theorem tarjan_rec_term k (roots : {set V}) e :
+  k >= #|~: visited e| * infty.+1 + #|roots| ->
+  dfs_correct (tarjan_rec k) roots e.
 Proof.
-move=> n_ge; elim: n => [|n IHn/=] in roots e n_ge *.
-  move: n_ge; rewrite leqn0 addn_eq0 cards_eq0 => /andP[_ /eqP-> e_wf _]/=.
+move=> k_ge; elim: k => [|k IHk/=] in roots e k_ge *.
+  move: k_ge; rewrite leqn0 addn_eq0 cards_eq0 => /andP[_ /eqP-> e_wf _]/=.
   constructor=> //=; rewrite /outenv ?nexts0 ?setDv ?big_set0// ?setU0.
   by split=> // ?; rewrite inE.
 apply: dfsP=> x x_roots; last first.
-  move=> e1 subee1; apply: IHn; rewrite -ltnS (leq_trans _ n_ge)//.
+  move=> e1 subee1; apply: IHk; rewrite -ltnS (leq_trans _ k_ge)//.
   rewrite (cardsD1 x roots) x_roots add1n -addSnnS ltn_add2r ltnS.
   by rewrite leq_mul2r //= subset_leq_card// setCS sub_visited.
-move=> e_wf xNvisited; apply: dfs1P => //; apply: IHn.
-rewrite visited_visit setCU setIC -setDE -ltnS (leq_trans _ n_ge)//.
+move=> e_wf xNvisited; apply: dfs1P => //; apply: IHk.
+rewrite visited_visit setCU setIC -setDE -ltnS (leq_trans _ k_ge)//.
 rewrite (cardsD1 x (~: _)) inE xNvisited add1n mulSnr -addnA ltn_add2l.
 by rewrite ltn_addr// ltnS max_card.
 Qed.
@@ -598,7 +597,7 @@ move=> _ _ e _ _ e_wf _ [_]; rewrite stack0 setD0.
 have [stacke _|[x xe]] := set_0Vmem (stack e); last first.
   by move=> /(_ _ xe)[?]; rewrite inE.
 rewrite visited0 set0U setC0 nextsT => visitede.
-have numE x : num e x = #|V|.
+have numE x : num e x = infty.
   apply/eqP; have /setP/(_ x) := visitede.
   by rewrite visitedE// stacke set0U !inE -num_sccs.
 apply/eqP; rewrite eqEsubset sub_gsccs//=; apply/subsetP => _/imsetP[/=x _->].
