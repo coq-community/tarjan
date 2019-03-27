@@ -28,13 +28,13 @@ Definition store scc e :=
   Env (scc |: esccs e) [ffun x => if x \in scc then infty else num e x].
 
 Definition dfs1 dfs x e :=
-    let: (m1, e1) as res := dfs [set y in successors x] (visit x e) in
-    if m1 < sn e then res else (infty, store (new_stack e e1) e1).
+    let: (n1, e1) as res := dfs [set y in successors x] (visit x e) in
+    if n1 < sn e then res else (infty, store (new_stack e e1) e1).
 
 Definition dfs dfs1 dfs (roots : {set V}) e :=
   if [pick x in roots] isn't Some x then (infty, e) else
-  let: (m1, e1) := if num e x != infty.+1 then (num e x, e) else dfs1 x e in
-  let: (m2, e2) := dfs (roots :\ x) e1 in (minn m1 m2, e2).
+  let: (n1, e1) := if num e x != infty.+1 then (num e x, e) else dfs1 x e in
+  let: (n2, e2) := dfs (roots :\ x) e1 in (minn n1 n2, e2).
 
 Fixpoint tarjan_rec k :=
   if k is k.+1 then dfs (dfs1 (tarjan_rec k)) (tarjan_rec k)
