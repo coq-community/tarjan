@@ -36,12 +36,13 @@ Definition dfs dfs1 dfs (roots : {set V}) e :=
   let: (n1, e1) := if num e x <= infty then (num e x, e) else dfs1 x e in
   let: (n2, e2) := dfs (roots :\ x) e1 in (minn n1 n2, e2).
 
-Fixpoint tarjan_rec k :=
-  if k is k.+1 then dfs (dfs1 (tarjan_rec k)) (tarjan_rec k)
-  else fun r e => (infty, e).
+Fixpoint tarjan_rec k r e :=
+  if k is k.+1 then dfs (dfs1 (tarjan_rec k)) (tarjan_rec k) r e
+  else (infty, e).
 
 Definition e0 := (Env set0 [ffun _ => infty.+1]).
-Definition tarjan := esccs (tarjan_rec (infty * infty.+1 + infty) setT e0).2.
+Definition tarjan := 
+  let: (_, e) := tarjan_rec (infty * infty.+2) setT e0 in esccs e.
 
 (*****************)
 (* Abbreviations *)
@@ -581,7 +582,8 @@ Proof. by apply/setP=> y; rewrite !inE ffunE ltnNge leqW ?max_card. Qed.
 
 Theorem tarjan_correct : tarjan = gsccs.
 Proof.
-rewrite /tarjan; case: tarjan_rec_term; first by rewrite visited0 setC0 cardsT.
+rewrite /tarjan; case: tarjan_rec_term.
+- by rewrite visited0 setC0 cardsT addnC -mulnS.
 - constructor; rewrite /= ?sub0set// => x; rewrite !ffunE//.
   + by rewrite ltnNge leqW//.
   + by rewrite gtn_eqF// /cover big_set0 inE.
