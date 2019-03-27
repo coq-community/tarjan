@@ -7,7 +7,8 @@ Unset Printing Implicit Defensive.
 
 Section tarjan.
 
-Variable (V : finType) (successors : V -> seq V).
+Variable (V : finType) (successor_seq : V -> seq V).
+Notation successors x := [set y in successor_seq x].
 Notation infty := #|V|.
 
 (*************************************************************)
@@ -20,7 +21,6 @@ Record env := Env {esccs : {set {set V}}; num: {ffun V -> nat}}.
 Definition visited e := [set x | num e x < infty.+1].
 Notation sn e := #|visited e|.
 Definition stack e := [set x | num e x < sn e].
-Notation new_stack e1 e2 := (stack e2 :\: stack e1).
 
 Definition visit x e :=
   Env (esccs e) (finfun [eta num e with x |-> sn e]).
@@ -28,8 +28,8 @@ Definition store scc e :=
   Env (scc |: esccs e) [ffun x => if x \in scc then infty else num e x].
 
 Definition dfs1 dfs x e :=
-    let: (n1, e1) as res := dfs [set y in successors x] (visit x e) in
-    if n1 < sn e then res else (infty, store (new_stack e e1) e1).
+    let: (n1, e1) as res := dfs (successors x) (visit x e) in
+    if n1 < sn e then res else (infty, store (stack e1 :\: stack e) e1).
 
 Definition dfs dfs1 dfs (roots : {set V}) e :=
   if [pick x in roots] isn't Some x then (infty, e) else
@@ -47,12 +47,14 @@ Definition tarjan := esccs (tarjan_rec (infty * infty.+1 + infty) setT e0).2.
 (* Abbreviations *)
 (*****************)
 
-Notation edge := (grel successors).
+Notation edge := (grel successor_seq).
 Notation gconnect := (connect edge).
 Notation gsymconnect := (symconnect edge).
 Notation gsccs := (sccs edge).
 Notation gscc_of := (pblock gsccs).
 Notation gconnected := (connected edge).
+Notation new_stack e1 e2 := (stack e2 :\: stack e1).
+Notation new_visited e1 e2 := (visited e2 :\: visited e1).
 
 (*******************)
 (* next, and nexts *)
@@ -68,7 +70,7 @@ Lemma nexts0 : nexts set0 = set0.
 Proof. by rewrite /nexts big_set0. Qed.
 
 Lemma nexts1 x :
-  nexts [set x] = x |: (if x \in D then nexts [set y in successors x] else set0).
+  nexts [set x] = x |: (if x \in D then nexts (successors x) else set0).
 Proof.
 apply/setP=> y; rewrite /nexts big_set1 !inE.
 have [->|neq_yx/=] := altP eqP; first by rewrite connect0.
@@ -127,12 +129,12 @@ by apply/bigcupP; exists t; rewrite // inE.
 Qed.
 
 Lemma nexts1_split (A : {set V}) x : x \in A ->
-  nexts A [set x] = x |: nexts (A :\ x) [set y in successors x].
+  nexts A [set x] = x |: nexts (A :\ x) (successors x).
 Proof.
 move=> xA; apply/setP=> y; apply/idP/idP; last first.
   rewrite nexts1 !inE xA; case: (_ == _); rewrite //=.
   by apply: subsetP; rewrite sub_nexts// subsetDl.
-move=> /bigcupP[z]; rewrite !inE => /eqP[{z}->].
+move=> /bigcupP[z]; rewrite !inE => /eqP {z}->.
 move=> /connectP[p /shortenP[[_ _ _ /eqP->//|z q/=/andP[/andP[_ xz]]]]].
 rewrite path_from => /andP[zq] /allP/= qA.
 move=> /and3P[xNzq _ _] _ ->; apply/orP; right.
@@ -223,7 +225,8 @@ Lemma wf_visit e x : wf_env e ->
    (forall y, num e y < sn e -> gconnect y x) ->
    x \notin visited e -> wf_env (visit x e).
 Proof.
-move=> e_wf x_connected xNvisited; constructor=> [|y|y|y|] //=; rewrite ?inE ?ffunE/=.
+move=> e_wf x_connected xNvisited.
+constructor=> [|y|y|y|] //=; rewrite ?inE ?ffunE/=.
 - exact: sub_gsccs.
 - by case: ifP; rewrite ?max_num// leqW ?max_card.
 - rewrite visited_visit cardsU1 xNvisited; case: ifPn => // _.
@@ -249,10 +252,12 @@ Definition subenv e1 e2 := [&&
 Lemma sub_sccs e1 e2 : subenv e1 e2 -> esccs e1 \subset esccs e2.
 Proof. by move=> /and3P[]. Qed.
 
-Lemma sub_snum e1 e2 : subenv e1 e2 -> forall x, num e1 x < infty.+1 -> num e2 x = num e1 x.
+Lemma sub_snum e1 e2 : subenv e1 e2 -> forall x, num e1 x < infty.+1 ->
+  num e2 x = num e1 x.
 Proof. by move=> /and3P[_ /forall_inP /(_ _ _) /eqP]. Qed.
 
-Lemma sub_vnum e1 e2 : subenv e1 e2 -> forall x, num e1 x < sn e1 -> num e2 x = num e1 x.
+Lemma sub_vnum e1 e2 : subenv e1 e2 -> forall x, num e1 x < sn e1 ->
+  num e2 x = num e1 x.
 Proof.
 move=> sube12 x num_lt; rewrite (sub_snum sube12)//.
 by rewrite (leq_trans num_lt)// leqW// max_card.
@@ -291,10 +296,9 @@ have [e1_after|e1_before] /= := leqP (sn e1) (num e1 x).
 by rewrite leqNgt -sub_num_lt// e1_before.
 Qed.
 
-Notation new_visited e1 e2 := (visited e2 :\: visited e1).
-
 Lemma new_visitedE e1 e2 : wf_env e1 -> wf_env e2 -> subenv e1 e2 ->
-(new_visited e1 e2) = (new_stack e1 e2) :|: cover (esccs e2) :\: cover (esccs e1).
+  (new_visited e1 e2) =
+    (new_stack e1 e2) :|: cover (esccs e2) :\: cover (esccs e1).
 Proof.
 move=> e1_wf e2_wf sube12; rewrite !visitedE//; apply/setP=> x.
 rewrite !inE -!num_sccs -?num_lt_V//; do 2!case: ltngtP => //=.
@@ -302,9 +306,12 @@ rewrite !inE -!num_sccs -?num_lt_V//; do 2!case: ltngtP => //=.
 by move=> xe2 xe1; move: xe2; rewrite (sub_snum sube12)// ?xe1// ltnn.
 Qed.
 
-Lemma sub_new_stack_new_visited e1 e2 : subenv e1 e2 -> wf_env e1 -> wf_env e2 ->
+Lemma sub_new_stack_new_visited e1 e2 :
+    subenv e1 e2 -> wf_env e1 -> wf_env e2 ->
   (new_stack e1 e2) \subset (new_visited e1 e2).
-Proof. by move=> e1_wf e2_wf sube12; rewrite (@new_visitedE e1 e2)// subsetUl. Qed.
+Proof.
+by move=> e1wf e2wf sube12; rewrite (@new_visitedE e1 e2)// subsetUl.
+Qed.
 
 Lemma sub_refl e : subenv e e.
 Proof. by rewrite /subenv !subxx /=; apply/andP; split; apply/forall_inP. Qed.
@@ -328,7 +335,8 @@ apply/forall_inP => y y_in; rewrite !ffunE/=.
 by case: (altP (y =P x)) xNvisited => // <-; rewrite inE y_in.
 Qed.
 
-Lemma visited_store (A : {set V}) e : A \subset visited e -> visited (store A e) = visited e.
+Lemma visited_store (A : {set V}) e : A \subset visited e ->
+  visited (store A e) = visited e.
 Proof.
 move=> A_sub; apply/setP=> x; rewrite !inE/= ffunE.
 by case: ifPn => // /(subsetP A_sub); rewrite inE leqnn => ->.
@@ -382,7 +390,7 @@ case: pickP => /= [x x_roots|]; last first.
 have [numx_infty|numx_ninfty]/= := altP eqP; last first.
   have numx_lt : num e x < infty.+1 by rewrite ltn_neqAle numx_ninfty max_num.
   have x_visited : x \in visited e by rewrite inE.
-  case: dfsP => //= [u v ve|_ _ e1 -> -> e1_wf subee1 [new1c new1old visited1E]].
+  case: dfsP => //= [u v ve|_ _ e1 ->-> e1_wf subee1 [new1c new1old visited1E]].
     by rewrite inE => /andP[_ v_roots]; rewrite roots_connected.
   constructor => //=.
     rewrite -[in RHS](setD1K x_roots) nextsU nexts1 inE x_visited/= setU0.
@@ -400,7 +408,8 @@ case: dfsP => //= [u v ue1|_ _ e2 -> -> e2_wf sube12 [new2c new2old visited2E]].
 have sube2 : subenv e e2 by exact: sub_trans sube12.
 have nexts_split : nexts (~: visited e) roots =
       nexts (~: visited e) [set x] :|: nexts (~: visited e1) (roots :\ x).
-  by rewrite -[in LHS](setD1K x_roots) nextsU visited1E setCU nextsUI// nexts_id.
+  rewrite -[in LHS](setD1K x_roots) nextsU visited1E.
+  by rewrite setCU nextsUI// nexts_id.
 constructor => //=.
   rewrite (eq_bigr (fun x => inord (num e2 x))); last first.
     move=> y y_in; rewrite (@sub_snum e1 e2)// num_lt_infty.
@@ -429,7 +438,7 @@ constructor => /=.
 + by rewrite visited2E {1}visited1E nexts_split setUA.
 Qed.
 
-Lemma dfs1P dfs x e (A := [set y in successors x]):
+Lemma dfs1P dfs x e (A := successors x) :
   dfs_correct dfs A (visit x e) -> dfs1_correct (dfs1 dfs) x e.
 Proof.
 rewrite /dfs1 => dfsP e_wf xNvisited x_connected.
@@ -439,7 +448,8 @@ have xNstack : x \notin stack e.
   by rewrite inE num0x ltnNge leqW// max_card.
 have xe_wf : wf_env (visit x e).
   by apply: wf_visit => // y y_lt; rewrite x_connected ?inE.
-have nexts1E : nexts (~: visited e) [set x] = x |: nexts (~: (x |: visited e)) A.
+have nexts1E : nexts (~: visited e) [set x] =
+    x |: nexts (~: (x |: visited e)) A.
   by rewrite nexts1_split ?setDE ?setCU 1?setIC 1?inE.
 case: dfsP => //=.
   rewrite stack_visit// => u v; rewrite in_setU1=> /predU1P[->|ue];
@@ -518,7 +528,7 @@ constructor => //=.
         by move=> /(_ _ (set11 x))/(connect_trans _) xz /xz.
       have: y \in new_visited (visit x e) e1.
         by apply: subsetP y_xee1; rewrite sub_new_stack_new_visited.
-      rewrite inE visited1E in_setU visited_visit//; case: (y \in _ |: _) => //=.
+      rewrite inE visited1E in_setU visited_visit//; case: (y \in _) => //=.
       move=> /in_nextsW[z]; rewrite inE=> /(@connect1 _ edge).
       exact: connect_trans.
     have /(connect_from (mem (~: visited e))) [z []] := xy; rewrite inE.
