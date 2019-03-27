@@ -157,3 +157,18 @@ Arguments geq_bigmin [n I F].
 Arguments bigmin_geqP [n I P m F].
 Arguments bigmin_inf [n I] i0 [P m F].
 Arguments bigmin_eq_arg [n I] i0 [P F].
+
+Section bigmin_bigcup.
+
+Variables (n : nat) (I J : finType).
+
+Lemma bigmin_bigcup (A : pred I) (B : I -> {set J}) F :
+  \min_(j in \bigcup_(i in A) B i) F j =
+  \min_(i in A) \min_(j in B i) F j :> 'I_n.+1.
+Proof.
+elim/big_rec2: (RHS); first by rewrite big_set0.
+by move=> i B0 m iA <-; rewrite bigmin_setU.
+Qed.
+
+End bigmin_bigcup.
+
