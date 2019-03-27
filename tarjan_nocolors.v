@@ -149,7 +149,7 @@ Qed.
 (* Well formed env *)
 (*******************)
 
-Lemma num_lt_infty e x : num e x <= infty = (x \in visited e).
+Lemma num_le_infty e x : num e x <= infty = (x \in visited e).
 Proof. by rewrite inE. Qed.
 
 Lemma num_lt_sn e x : num e x < sn e = (x \in stack e).
@@ -172,7 +172,6 @@ Section wfenv.
 
 Record wf_env e := WfEnv {
   sub_gsccs : esccs e \subset gsccs;
-  max_num : forall x, num e x <= infty.+1;
   num_lt_V_is_stack : forall x, num e x < infty -> num e x < sn e;
   num_sccs : forall x, (num e x == infty) = (x \in cover (esccs e));
   le_connect : forall x y, num e x <= num e y < sn e -> gconnect x y;
@@ -180,8 +179,8 @@ Record wf_env e := WfEnv {
 
 Variables (e : env) (e_wf : wf_env e).
 
-Lemma notvisited_num x : x \notin visited e -> num e x = infty.+1.
-Proof. by rewrite inE -ltnS ltn_neqAle max_num// andbT negbK => /eqP. Qed.
+Lemma num_gt_V x : x \notin visited e -> num e x > infty.
+Proof. by rewrite inE -ltnNge. Qed.
 
 Lemma num_lt_V x : (num e x < infty) = (num e x < sn e).
 Proof.
@@ -200,12 +199,6 @@ Qed.
 Lemma visitedE : visited e = stack e :|: cover (esccs e).
 Proof. by apply/setP=> x; rewrite !inE leq_eqVlt -num_sccs// num_lt_V orbC. Qed.
 
-Lemma vs_disjoint : [disjoint stack e & cover (esccs e)].
-Proof.
-rewrite -setI_eq0; apply/eqP/setP=> x; rewrite !inE -num_sccs//.
-by rewrite -num_lt_V; case: ltngtP.
-Qed.
-
 Lemma sub_sccs_visited : cover (esccs e) \subset visited e.
 Proof. by apply/subsetP => x; rewrite !inE -num_sccs// => /eqP->. Qed.
 
@@ -223,13 +216,12 @@ Lemma wf_visit e x : wf_env e ->
    x \notin visited e -> wf_env (visit x e).
 Proof.
 move=> e_wf x_connected xNvisited.
-constructor=> [|y|y|y|] //=; rewrite ?inE ?ffunE/=.
+constructor=> [|y|y|] //=; rewrite ?inE ?ffunE/=.
 - exact: sub_gsccs.
-- by case: ifP; rewrite ?max_num// leqW ?max_card.
 - rewrite visited_visit cardsU1 xNvisited; case: ifPn => // _.
   by rewrite num_lt_V// ltnS => /ltnW.
 - have [->|] := altP (y =P x); last by rewrite num_sccs.
-  rewrite -num_sccs// notvisited_num// eq_sym !gtn_eqF//.
+  rewrite -num_sccs// eq_sym !gtn_eqF ?num_gt_V//.
   by rewrite (@leq_trans #|x |: visited e|) ?max_card// cardsU1 xNvisited.
 move=> y z; rewrite !ffunE/=.
 have sub_visit : visited e \subset visited (visit x e).
@@ -409,7 +401,7 @@ have nexts_split : nexts (~: visited e) roots =
 constructor => //=.
   rewrite (eq_bigr (inord \o num e2)).
    by rewrite -[LHS]/(val (ord_minn _ _)) -bigmin_setU /= -nexts_split.
-  move=> y y_in; rewrite /= (@sub_snum e1 e2)// num_lt_infty.
+  move=> y y_in; rewrite /= (@sub_snum e1 e2)// num_le_infty.
   by rewrite visited1E setUC inE y_in.
 constructor => /=.
 + rewrite -(@setUD _ (stack e1)) ?sub_stack//.
@@ -439,9 +431,9 @@ Lemma dfs1P dfs x e (A := successors x) :
 Proof.
 rewrite /dfs1 => dfsP e_wf xNvisited x_connected.
 have subexe: subenv e (visit x e) by exact: sub_visit.
-have num0x : num e x = infty.+1 by apply: notvisited_num.
+have numx : num e x > infty by apply: num_gt_V.
 have xNstack : x \notin stack e.
-  by rewrite inE num0x ltnNge leqW// max_card.
+  by rewrite inE -leqNgt (leq_trans _ numx) ?leqW ?max_card.
 have xe_wf : wf_env (visit x e).
   by apply: wf_visit => // y y_lt; rewrite x_connected ?inE.
 have nexts1E : nexts (~: visited e) [set x] =
@@ -482,7 +474,7 @@ have [min_after|min_before] := leqP; last first.
       rewrite card_gt0; apply: contraTneq min_before => ->.
       by rewrite big_set0 -leqNgt max_card.
     rewrite !inE => v_in min_is_v; move: min_before; rewrite min_is_v/=.
-    rewrite inordK; last by rewrite ltnS num_lt_infty visited1E inE v_in orbT.
+    rewrite inordK; last by rewrite ltnS num_le_infty visited1E inE v_in orbT.
     rewrite -sub_num_lt// => v_lt; exists v; rewrite ?inE//.
     move: v_in => /in_nextsW[z]; rewrite inE => /(@connect1 _ edge).
     by apply: connect_trans.
@@ -500,11 +492,11 @@ have all_geq y : y \in nexts (~: visited e) [set x] ->
   rewrite {1}sn_inord; move/bigmin_geqP => /(_ y) y_ge.
   rewrite nexts1E !inE => /predU1P[->|yA]; rewrite ?num1x ?max_card ?leqnn//.
   rewrite sn_inord (leq_trans (y_ge _))// ?inordK//;
-  by rewrite ?ltnS num_lt_infty visited1E 2!inE yA orbT.
+  by rewrite ?ltnS num_le_infty visited1E 2!inE yA orbT.
 constructor => //=.
 - rewrite big1// => y xy; rewrite ffunE new_stackE ?inE//=.
   have y_visited1 : num e1 y <= infty.
-    by rewrite num_lt_infty visited1E -setUA setUCA -nexts1E inE xy orbT.
+    by rewrite num_le_infty visited1E -setUA setUCA -nexts1E inE xy orbT.
   apply/val_inj=> /=; case: ifPn; rewrite ?inordK//.
   by rewrite all_geq//= -num_lt_V// -leqNgt; move: y_visited1; case: ltngtP.
 - constructor => //=; rewrite ?visited_store ?sub_new_stack_visited//.
@@ -512,7 +504,7 @@ constructor => //=.
     suff -> : new_stack e e1 = gscc_of x by rewrite pblock_mem ?cover_sccs.
     apply/setP=> y; rewrite mem_scc /symconnect.
     have [->|neq_yx] := eqVneq y x.
-      by rewrite connect0 !inE num0x -leqNgt leqW ?max_card//= num1x lt_sn_sn1.
+      by rewrite connect0 inE xNstack inE num1x lt_sn_sn1.
     apply/idP/andP=> [|[xy yx]].
       move=> y_ee1; have y_xee1 : y \in new_stack (visit x e) e1.
         by rewrite inE stack_visit// in_setU1 (negPf neq_yx)/= -in_setD.
@@ -540,12 +532,10 @@ constructor => //=.
        by rewrite eq_V// ltnNge max_card in lt_sn_sn1.
     have zNvisited : z \notin visited e.
       rewrite inE -ltnNge ltn_neqAle zNstack andbT/= eq_sym num_sccs//.
-      apply: contraTN isT => /(zNcover _ e_wf).
-      by rewrite -num_sccs// num0x; elim: infty.
+      by apply: contraTN isT => /(zNcover _ e_wf); rewrite -num_sccs// gtn_eqF.
     move: eq_yz; rewrite zNvisited /= => /andP[/eqP eq_yz _].
     rewrite -eq_yz in zNstack z_stack.
     by rewrite !inE -num_lt_V// -leqNgt zNstack.
-  + by move=> v; rewrite ffunE/=; case: ifP; rewrite ?max_num //.
   + move=> v; rewrite ffunE/=; case: ifPn; rewrite ?ltnn// => vNe12.
     by rewrite num_lt_V// visited_store.
   + move=> v; rewrite ffunE /= cover1U [in RHS]inE.
