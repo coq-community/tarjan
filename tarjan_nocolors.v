@@ -353,7 +353,7 @@ Variant dfs_spec_def (dfs : nat * env) (roots : {set V}) e :
     n = \min_(x in nexts (~: visited e) roots) inord (num e' x) &
     wf_env e' & subenv e e' & outenv roots e e' :
   dfs_spec_def dfs roots e ne' n e'.
-Notation dfs_spec dfs roots e := (dfs_spec_def dfs roots e dfs dfs.1 dfs.2).
+Notation dfs_spec ne' roots e := (dfs_spec_def ne' roots e ne' ne'.1 ne'.2).
 
 Definition dfs_correct dfs (roots : {set V}) e := wf_env e ->
   {in stack e & roots, gconnected} -> dfs_spec (dfs roots e) roots e.
