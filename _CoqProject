@@ -6,5 +6,6 @@ tarjan_nocolors.v
 tarjan_rank.v
 tarjan_rank_bigmin.v
 extra.v
+extra_nocolors.v
 bigmin.v
 Kosaraju.v

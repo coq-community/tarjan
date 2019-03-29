@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-Require Import bigmin extra.
+Require Import extra_nocolors.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
