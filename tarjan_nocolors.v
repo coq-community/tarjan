@@ -36,13 +36,12 @@ Definition dfs dfs1 dfs (roots : {set V}) e :=
   let: (n1, e1) := if num e x <= infty then (num e x, e) else dfs1 x e in
   let: (n2, e2) := dfs (roots :\ x) e1 in (minn n1 n2, e2).
 
-Fixpoint tarjan_rec k r e :=
-  if k is k.+1 then dfs (dfs1 (tarjan_rec k)) (tarjan_rec k) r e
+Fixpoint rec k r e :=
+  if k is k.+1 then dfs (dfs1 (rec k)) (rec k) r e
   else (infty, e).
 
 Definition e0 := (Env set0 [ffun _ => infty.+1]).
-Definition tarjan := 
-  let: (_, e) := tarjan_rec (infty * infty.+2) setT e0 in esccs e.
+Definition tarjan := let: (_, e) := rec (infty * infty.+2) setT e0 in esccs e.
 
 (*****************)
 (* Abbreviations *)
@@ -556,9 +555,8 @@ constructor => //=.
   by rewrite visited1E -setUA setUCA -nexts1E.
 Qed.
 
-Theorem tarjan_rec_term k (roots : {set V}) e :
-  k >= #|~: visited e| * infty.+1 + #|roots| ->
-  dfs_correct (tarjan_rec k) roots e.
+Theorem rec_terminates k (roots : {set V}) e :
+  k >= #|~: visited e| * infty.+1 + #|roots| -> dfs_correct (rec k) roots e.
 Proof.
 move=> k_ge; elim: k => [|k IHk/=] in roots e k_ge *.
   move: k_ge; rewrite leqn0 addn_eq0 cards_eq0 => /andP[_ /eqP-> e_wf _]/=.
@@ -582,14 +580,14 @@ Proof. by apply/setP=> y; rewrite !inE ffunE ltnNge leqW ?max_card. Qed.
 
 Theorem tarjan_correct : tarjan = gsccs.
 Proof.
-rewrite /tarjan; case: tarjan_rec_term.
-- by rewrite visited0 setC0 cardsT addnC -mulnS.
+rewrite /tarjan mulnSr; case: rec_terminates.
+- by rewrite visited0 setC0 cardsT.
 - constructor; rewrite /= ?sub0set// => x; rewrite !ffunE//.
   + by rewrite ltnNge leqW//.
   + by rewrite gtn_eqF// /cover big_set0 inE.
   + by move=> y; rewrite !ffunE//= andbC ltnNge leqW// ?max_card.
 - by move=> y; rewrite !inE !ffunE/= ltnNge leqW// max_card.
-move=> _ _ e _ _ e_wf _ [_]; rewrite stack0 setD0.
+move=> _ _ e -> _ e_wf _ [_]; rewrite stack0 setD0.
 have [stacke _|[x xe]] := set_0Vmem (stack e); last first.
   by move=> /(_ _ xe)[?]; rewrite inE.
 rewrite visited0 set0U setC0 nextsT => visitede.
