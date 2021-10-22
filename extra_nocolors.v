@@ -75,7 +75,7 @@ Qed.
 Lemma bigmin_eq_arg i0 (P : pred I) F :
   P i0 -> \min_(i | P i) F i = F [arg min_(i < i0 | P i) F i].
 Proof.
-move=> Pi0; case: arg_minP => //= i Pi minFi.
+move=> Pi0; case: arg_minnP => //= i Pi minFi.
 by apply/val_inj/eqP; rewrite eqn_leq geq_bigmin_cond //=; apply/bigmin_geqP.
 Qed.
 
@@ -83,7 +83,7 @@ Lemma eq_bigmin_cond (A : pred I) F :
   #|A| > 0 -> {i0 | i0 \in A & \min_(i in A) F i = F i0}.
 Proof.
 case: (pickP A) => [i0 Ai0 _ | ]; last by move/eq_card0->.
-by exists [arg min_(i < i0 in A) F i]; [case: arg_minP | apply: bigmin_eq_arg].
+by exists [arg min_(i < i0 in A) F i]; [case: arg_minnP | apply: bigmin_eq_arg].
 Qed.
 
 Lemma eq_bigmin F : #|I| > 0 -> {i0 : I | \min_i F i = F i0}.
@@ -105,7 +105,7 @@ End extra_bigmin.
 
 Arguments geq_bigmin_cond [n I P F].
 Arguments geq_bigmin [n I F].
-Arguments bigmin_geqP [n I P m F].
+Arguments bigmin_geqP {n I P m F}.
 Arguments bigmin_inf [n I] i0 [P m F].
 Arguments bigmin_eq_arg [n I] i0 [P F].
 
@@ -215,7 +215,7 @@ Proof.
 move=> x y z /andP[Cyx Cxy] /andP[Cxz Czx].
 by rewrite /symconnect (connect_trans Cyx) ?(connect_trans Czx).
 Qed.
-Hint Resolve symconnect0 symconnect_sym symconnect_trans.
+Hint Resolve symconnect0 symconnect_sym symconnect_trans : core.
 
 Lemma symconnect_equiv : equivalence_rel symconnect.
 Proof. by apply/equivalence_relP; split; last apply/sym_left_transitive. Qed.
@@ -233,7 +233,7 @@ Definition cover_sccs := cover_partition sccs_partition.
 
 Lemma trivIset_sccs : trivIset sccs.
 Proof. by case/and3P: sccs_partition. Qed.
-Hint Resolve trivIset_sccs.
+Hint Resolve trivIset_sccs : core.
 
 Notation scc_of := (pblock sccs).
 

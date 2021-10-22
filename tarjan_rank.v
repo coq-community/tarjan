@@ -156,7 +156,7 @@ apply/setP=> y; rewrite !inE.
 by have [->|] := altP (y =P x); case: colorP=> //=; case: colorP x_gray.
 Qed.
 
-Hint Resolve wf_stack_uniq.
+Hint Resolve wf_stack_uniq : core.
 
 Lemma add_sccs_wf x e :
   take (index x (stack e)) (stack e) \subset blacks e ->
@@ -419,10 +419,8 @@ case: ifPn=> [x_stack|xNstack].
       by rewrite geq_min pc1 ?orbT // !inE neq_yx.
     by have [[s -> _ _ _]] := monotony; rewrite rank_catl // geq_min leqnn.
   - right; case: (leqP (rank x (stack e)) m2) => [rx_small|/ltnW rx_big].
-      rewrite (minn_idPl _) //.
       exists x => //; exists x; rewrite ?inE ?connect0 //.
       by have [[s ->]] := monotony; rewrite rank_catl.
-    rewrite (minn_idPr _) //.
     case: pc2 rx_big=> [->|[y]]; first by rewrite leqNgt rank_lt ?x_stack.
     rewrite !inE => /andP[neq_yx y_roots [z y_to_z m_def]].
     by move=> m_small; exists y => //; exists z.
@@ -494,10 +492,8 @@ split.
     case: pc2=> z; rewrite inE => /eqP -> [t x_to_t m1_def].
     by exists t => //; rewrite s2_def rank_catl // -rank_lt -?m1_def.
   + case: (leqP m1 m2) => [m12|/ltnW m21]; last first.
-      rewrite (minn_idPr _) //.
       case: m2_reachable => y; rewrite !inE => /andP[_ y_root] [z y_to_z m2_def].
       by right; exists y => //; exists z => //.
-    rewrite (minn_idPl _) //.
     case: ltngtP m1_rank => // [m1_lt _|]; last by left.
     right; exists x => //; case: pc2=> [m1_infty|[z]].
       by rewrite m1_infty ltnn in m1_lt.
@@ -532,16 +528,18 @@ exists (nth x (x :: p) n), (nth x p n).
 rewrite [_ \notin s](@nth_find _ _ (predC s)) ?(pathP _ _) //.
 have [->|n_gt0] := posnP n.
   rewrite ?nth0 /= xs connect0; split=> //.
+    by case: (p) yNs path_xp => [|? ? _ /andP[]]; rewrite //= xs.
   case: p {yNs n hasNs_p n_small} path_xp => //= z p.
   by move=> /andP [xz zp]; rewrite (appP connectP idP) //; exists p.
 rewrite -{1 2}[n]prednK //= -[_ \in s]negbK.
 rewrite [_ \notin s](@before_find _ _ (predC s)) ?prednK //=.
-split=> //; apply/connectP.
-  exists (take n p).
-    by move: path_xp; rewrite -{1}[p](@cat_take_drop n) cat_path=> /andP[].
-  rewrite (last_nth x) size_take n_small.
-  by case: (n) n_gt0 => //= k _; rewrite nth_take.
-exists (drop n.+1 p).
+split=> //.
+  - apply/connectP; exists (take n p).
+      by move: path_xp; rewrite -{1}[p](@cat_take_drop n) cat_path=> /andP[].
+    rewrite (last_nth x) size_take n_small.
+    by case: (n) n_gt0 => //= k _; rewrite nth_take.
+  - by have /pathP/(_ _ n_small) :=  path_xp => /(_ x).
+apply/connectP; exists (drop n.+1 p).
   move: path_xp; rewrite -{1}[p](@cat_take_drop n.+1) cat_path=> /andP[_].
   rewrite (last_nth x) /= size_take ltn_neqAle n_small andbT.
    by have [->|] := altP eqP; rewrite /= ?drop_size ?nth_take.
@@ -563,7 +561,7 @@ case: post_dfs' => //=.
   split => //; do?[exact: add_stack_ewf|exact: add_stack_gwf]; last first.
      move=> y /Nbw; rewrite whites_add_stack.
      rewrite ![[disjoint successors _ & _]]disjoint_sym.
-     by apply/disjoint_trans/subsetDl.
+     by apply/disjointWl/subsetDl.
   move=> y; rewrite grays_add_stack // => /setU1P [->|]; last first.
     move=> y_gray z; rewrite inE => /(@connect1 _ edge).
     by apply/connect_trans/access_to_x; rewrite ?set11.
@@ -811,7 +809,7 @@ case: tarjan_rec => [m e] [].
 rewrite subTset => /eqP blackse [[[stack_wf _ _] _ _]].
 rewrite grays0 => grayse; rewrite grayse setU0 in blackse.
 rewrite /black_gsccs /= blackse => sccse _ [_ minfty _].
-have {sccse}sccse: esccs e = gsccs.
+have {}sccse: esccs e = gsccs.
   by apply/setP=> scc; rewrite sccse inE subsetT andbT.
 have stacke : stack e = [::].
   have := stack_wf; rewrite grayse blackse sccse cover_sccs set0U setDv.
