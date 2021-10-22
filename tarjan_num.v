@@ -179,8 +179,8 @@ Record wf_color e := WfEnv {
    wf_sccs  : cover (esccs e) \subset black e;
    wf_uniq  : uniq (stack e);
 }.
-Hint Resolve wf_sccs.
-Hint Resolve wf_uniq.
+Hint Resolve wf_sccs : core.
+Hint Resolve wf_uniq : core.
 
 Inductive color4_spec x e : bool -> bool -> bool -> bool -> bool -> Type :=
 | Color4Gray of x \in gray e : color4_spec x e false true false true false
@@ -581,10 +581,10 @@ move=> e; rewrite /subenv eqxx !subxx /=.
 apply/andP; split; first by apply/forall_inP=> *.
 by apply/existsP; exists ord0; rewrite drop0.
 Qed.
-Hint Resolve subenv_refl.
+Hint Resolve subenv_refl : core.
 
 Lemma subenvee e : subenv e e. Proof. exact: subenv_refl. Qed.
-Hint Resolve subenvee.
+Hint Resolve subenvee : core.
 
 Lemma subenv_trans e2 e1 e3 : wf_color e2 -> wf_color e3 ->
   subenv e1 e2 -> subenv e2 e3 -> subenv e1 e3.
@@ -751,7 +751,7 @@ case: post_dfs => //=.
     split=> //; do?[exact: add_stack_cwf|exact: add_stack_gwf|exact: add_stack_nwf].
   move=> y /Nbw; rewrite white_add_stack.
   rewrite ![[disjoint successors _ & _]]disjoint_sym.
-  by apply/disjoint_trans/subsetDl.
+  by apply/disjointWl/subsetDl.
 move=> [e1_wf e1_cwf e1_gwf Nbw1 black_sccs1] sube1 white1 m_min.
 have [//|s s_def sb] := subenv_stackP _ sube1.
 set s2 := rcons s x.
@@ -1118,7 +1118,7 @@ have blacke : black e = setT.
   move/eqP: whe; rewrite whiteE graye gray0 set0U.
   by rewrite -subset0 subCset setC0 subTset => /eqP.
 rewrite /black_gsccs blacke ?graye ?gray0 ?setTD ?set0U// in sccse stack_wf.
-have {sccse}sccse: esccs e = gsccs.
+have {}sccse: esccs e = gsccs.
   by apply/setP=> scc; rewrite sccse inE subsetT andbT.
 have stacke : stack e = [::].
   have := stack_wf; rewrite sccse cover_sccs setCT.
@@ -1126,12 +1126,12 @@ have stacke : stack e = [::].
 have sne : sn e = infty.
   by rewrite wf_sn// graye blacke gray0 set0U cardsT.
 have nume : num e = [ffun _ => infty].
-  apply/ffunP => x; rewrite ffunE; apply/eqP; rewrite wf_num_infty//.
+  apply/ffunP => x; rewrite ffunE; apply/eqP; rewrite wf_num_infty //=.
   by rewrite sccse cover_sccs.
 congr (_, _); last first.
   by case: (e) blacke sccse stacke sne nume => //= *; congr Env.
-rewrite big1 // => x _; apply/val_inj; rewrite /= ord_num//.
-by apply/eqP; rewrite wf_num_infty // sccse cover_sccs.
+rewrite big1 // => x _; apply/val_inj; rewrite /= ord_num //=.
+by apply/eqP; rewrite wf_num_infty // sccse cover_sccs inE.
 Qed.
 
 Theorem tarjan_correct : tarjan = gsccs.

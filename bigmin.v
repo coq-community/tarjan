@@ -26,11 +26,9 @@ Reserved Notation "\min_ ( i | P ) F"
   (at level 41, F at level 41, i at level 50,
            format "'[' \min_ ( i  |  P ) '/  '  F ']'").
 Reserved Notation "\min_ ( i : t | P ) F"
-  (at level 41, F at level 41, i at level 50,
-           only parsing).
+  (at level 41, F at level 41, i at level 50).
 Reserved Notation "\min_ ( i : t ) F"
-  (at level 41, F at level 41, i at level 50,
-           only parsing).
+  (at level 41, F at level 41, i at level 50).
 Reserved Notation "\min_ ( i < n | P ) F"
   (at level 41, F at level 41, i, n at level 50,
            format "'[' \min_ ( i  <  n  |  P ) '/  '  F ']'").
@@ -124,7 +122,7 @@ Qed.
 Lemma bigmin_eq_arg i0 (P : pred I) F :
   P i0 -> \min_(i | P i) F i = F [arg min_(i < i0 | P i) F i].
 Proof.
-move=> Pi0; case: arg_minP => //= i Pi minFi.
+move=> Pi0; case: arg_minnP => //= i Pi minFi.
 by apply/val_inj/eqP; rewrite eqn_leq geq_bigmin_cond //=; apply/bigmin_geqP.
 Qed.
 
@@ -132,7 +130,7 @@ Lemma eq_bigmin_cond (A : pred I) F :
   #|A| > 0 -> {i0 | i0 \in A & \min_(i in A) F i = F i0}.
 Proof.
 case: (pickP A) => [i0 Ai0 _ | ]; last by move/eq_card0->.
-by exists [arg min_(i < i0 in A) F i]; [case: arg_minP | apply: bigmin_eq_arg].
+by exists [arg min_(i < i0 in A) F i]; [case: arg_minnP | apply: bigmin_eq_arg].
 Qed.
 
 Lemma eq_bigmin F : #|I| > 0 -> {i0 : I | \min_i F i = F i0}.
@@ -154,7 +152,7 @@ End extra_bigmin.
 
 Arguments geq_bigmin_cond [n I P F].
 Arguments geq_bigmin [n I F].
-Arguments bigmin_geqP [n I P m F].
+(* Arguments bigmin_geqP [n I P m F]. *)
 Arguments bigmin_inf [n I] i0 [P m F].
 Arguments bigmin_eq_arg [n I] i0 [P F].
 

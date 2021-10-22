@@ -256,7 +256,7 @@ Lemma sub_num_lt e1 e2 : subenv e1 e2 ->
   forall x, (num e1 x < sn e1) = (num e2 x < sn e1).
 Proof.
 move=> /and3P[_ /forall_inP /(_ _ _)/eqP num_eq /forall_inP] num_lt x.
-have nume1_lt := num_lt x; apply/idP/idP => // {nume1_lt}nume1_lt.
+have nume1_lt := num_lt x; apply/idP/idP => // {}nume1_lt.
 by rewrite num_eq ?inE// (leq_trans (ltnW nume1_lt))//  max_card.
 Qed.
 
@@ -291,7 +291,8 @@ Lemma new_visitedE e1 e2 : wf_env e1 -> wf_env e2 -> subenv e1 e2 ->
 Proof.
 move=> e1_wf e2_wf sube12; rewrite !visitedE//; apply/setP=> x.
 rewrite !inE -!num_sccs -?num_lt_V//; do 2!case: ltngtP => //=.
-  by rewrite num_lt_V// (sub_num_lt sube12)// => ->; rewrite ltnNge max_card.
+  rewrite num_lt_V// (sub_num_lt sube12) => lt_ne2.
+  by case: ltngtP (leq_trans lt_ne2 (max_card _)).
 by move=> xe2 xe1; move: xe2; rewrite (sub_snum sube12)// ?xe1// ltnn.
 Qed.
 
@@ -304,7 +305,7 @@ Qed.
 
 Lemma sub_refl e : subenv e e.
 Proof. by rewrite /subenv !subxx /=; apply/andP; split; apply/forall_inP. Qed.
-Hint Resolve sub_refl.
+Hint Resolve sub_refl : core.
 
 Lemma sub_trans : transitive subenv.
 Proof.

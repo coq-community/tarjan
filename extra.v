@@ -199,7 +199,8 @@ Proof.
 move=> x y z /andP[Cyx Cxy] /andP[Cxz Czx].
 by rewrite /symconnect (connect_trans Cyx) ?(connect_trans Czx).
 Qed.
-Hint Resolve symconnect0 symconnect_sym symconnect_trans.
+
+Hint Resolve symconnect0 symconnect_sym symconnect_trans : core.
 
 Lemma symconnect_equiv : equivalence_rel symconnect.
 Proof. by apply/equivalence_relP; split; last apply/sym_left_transitive. Qed.
@@ -217,7 +218,7 @@ Definition cover_sccs := cover_partition sccs_partition.
 
 Lemma trivIset_sccs : trivIset sccs.
 Proof. by case/and3P: sccs_partition. Qed.
-Hint Resolve trivIset_sccs.
+Hint Resolve trivIset_sccs : core.
 
 Notation scc_of := (pblock sccs).
 

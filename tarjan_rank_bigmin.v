@@ -84,8 +84,8 @@ Record wf_env e := WfEnv {
    wf_sccs : cover (esccs e) \subset blacks e;
    wf_uniq : uniq (stack e)
 }.
-Hint Resolve wf_sccs.
-Hint Resolve wf_uniq.
+Hint Resolve wf_sccs : core.
+Hint Resolve wf_uniq : core.
 
 Inductive color4_spec x e : bool -> bool -> bool -> bool -> bool -> Type :=
 | Color4Gray of x \in grays e : color4_spec x e false true false true false
@@ -489,10 +489,10 @@ Proof.
 move=> e; rewrite /subenv eqxx !subxx /=.
 by apply/existsP; exists ord0; rewrite drop0.
 Qed.
-Hint Resolve subenv_refl.
+Hint Resolve subenv_refl : core.
 
 Lemma subenvee e : subenv e e. Proof. exact: subenv_refl. Qed.
-Hint Resolve subenvee.
+Hint Resolve subenvee : core.
 
 Lemma subenv_trans e2 e1 e3 : wf_env e2 -> wf_env e3 ->
   subenv e1 e2 -> subenv e2 e3 -> subenv e1 e3.
@@ -623,7 +623,7 @@ case: post_dfs' => //=.
   split=> //; do?[exact: add_stack_ewf|exact: add_stack_gwf].
   move=> y /Nbw; rewrite whites_add_stack.
   rewrite ![[disjoint successors _ & _]]disjoint_sym.
-   by apply/disjoint_trans/subsetDl.
+   by apply/disjointWl/subsetDl.
 move=> [e1_wf e1_gwf Nbw1 black_sccs1] sube1 whites1 m_min.
 have [//|s s_def sb] := subenv_stackP _ sube1.
 set s2 := rcons s x.
@@ -891,7 +891,7 @@ have blackse : blacks e = setT.
   move/eqP: whe; rewrite whitesE grayse grays0 set0U.
   by rewrite -subset0 subCset setC0 subTset => /eqP.
 rewrite /black_gsccs blackse ?grayse ?grays0 ?setTD ?set0U// in sccse stack_wf.
-have {sccse}sccse: esccs e = gsccs.
+have {}sccse: esccs e = gsccs.
   by apply/setP=> scc; rewrite sccse inE subsetT andbT.
 have stacke : stack e = [::].
   have := stack_wf; rewrite sccse cover_sccs setCT.
