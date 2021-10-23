@@ -657,40 +657,28 @@ Qed.
 Lemma pdfs_uniq s l x :
   uniq l -> {subset l <= ~: s} -> uniq (pdfs (s,l) x).2.
 Proof.
-move => Hu Hs.
-have Hus: uniq l /\ {subset l <= ~: s} by [].
-have Hpc := pdfs_correct (s,l) x Hus.
-move: Hpc; rewrite /=.
-set f := pdfs _ _.
-case: f => s' l'.
-case: ifP => //=.
-- by move => Hx; case => Hs'; move =>->.
-- by move => Hx [[Hs' Hu'] He].
+move=> uniql subls.
+move: (pdfs_correct (s,l) x (conj uniql subls)).
+case: (pdfs _ _) => s' l' /=.
+case: ifP => ?; first by case => ? =>->.
+by move=> [[_ ?]].
 Qed.
 
 Lemma pdfs_subset s l s' l' x :
-  uniq l -> {subset l <= ~: s} ->
-  pdfs (s,l) x = (s', l') ->
+  uniq l -> {subset l <= ~: s} -> pdfs (s,l) x = (s', l') ->
   {subset l' <= ~: s'}.
 Proof.
-move => Hu Hs Hp.
-have Hus: uniq l /\ {subset l <= ~: s} by [].
-have Hpc := pdfs_correct (s,l) x Hus.
-move: Hpc; rewrite /= Hp.
-case: ifP => Hx; first by case =>->->.
-move => [Hu' [l2 Hl2]].
-case: Hl2 => Hxl2 Hs' Hl' Hts Hc.
-rewrite Hs' Hl' => y.
-rewrite mem_cat; move/orP; case.
-- move => Hy.
-  apply/setCP.
-  move/setDP => [Hy' Hsy].
-  move/negP: Hsy; case.
-  by rewrite inE.
-- move => Hy.
-  apply/setCP.
-  move/setDP => [Hy' Hsy].
-  by move/setCP: (Hs _ Hy).
+move=> uniql subls pdfsl.
+move: (pdfs_correct (s,l) x (conj uniql subls)).
+rewrite /= pdfsl.
+case: ifP => xs; first by case =>->->.
+move=> [sle [l2 [xl2 ss' l2l' l2tsorted l2connect]]].
+rewrite ss' l2l' => y.
+rewrite mem_cat => /orP; case => yl2.
+  apply/setCP; move/setDP=> [ys yyl2].
+  by move/negP: yyl2; case; rewrite inE.
+apply/setCP; move/setDP=> [ys yyl2].
+by move/setCP: (subls _ yl2).
 Qed.
 
 Lemma foldr_pdfs_subset l0 (s : {set T}) l s' l' :
@@ -698,37 +686,28 @@ Lemma foldr_pdfs_subset l0 (s : {set T}) l s' l' :
   foldr (fun x : T => (pdfs)^~ x) (s, l) l0 = (s', l') ->
   uniq l' /\ {subset l' <= ~: s'}.
 Proof.
-elim: l0 s l s' l' => //=; first by move => s l' s' l0 Hu Hs; case =><-<-.
-move => x l IH s l0 s' l' Hl0 Hs.
-set f := foldr _ _ _.
-case Hf: f.
-have [Hb Ha] := IH _ _ _ _ Hl0 Hs Hf.
-have Hu := pdfs_uniq x Hb Ha.
-move => Hp.
-rewrite Hp /= in Hu.
-split => //.
-move: Hp.
+elim: l0 s l s' l' => /= [s l' s' l0 ? ? [<- <-]//|].
+move=> x l IH s l0 s' l' uniql0 subs.
+case fld: (foldr _) => [s1 l1].
+case (IH _ _ _ _ uniql0 subs fld) => uniql1 subs1.
+move=> pdfsl; move: (pdfs_uniq x uniql1 subs1).
+rewrite pdfsl; split => //; move: pdfsl.
 exact: pdfs_subset.
 Qed.
 
 Lemma tseq_uniq : uniq tseq.
 Proof.
-rewrite /tseq.
-set l := enum T.
+rewrite /tseq; set l := enum T.
 have ->: l = rev (rev l) by rewrite revK.
 rewrite foldl_rev.
-have Hu: uniq (rev l) by rewrite rev_uniq; apply: enum_uniq.
-move: Hu.
-set l' := rev l.
-move: l' => {l}.
-elim => //=.
-move => x l IH.
-move/andP => [Hx Hul].
-set f' := foldr _ _ _.
-case Hf': f'.
-have Hue: @uniq T [::] by [].
-have Hss: {subset [::] <= ~: [set: T]} by [].
-have [Huf Hus] := foldr_pdfs_subset Hue Hss Hf'.
+have uniqrevl: uniq (rev l).
+  by rewrite rev_uniq; apply: enum_uniq.
+move: uniqrevl; set l' := rev l.
+move: {l} l'; elim => //= x l IH /andP.
+case fld: (foldr _ _ _) => [s l'] [xl uniql].
+have uniq0: @uniq T [::] by [].
+have sub0: {subset [::] <= ~: [set: T]} by [].
+case (foldr_pdfs_subset uniq0 sub0 fld) => uniql' subs.
 exact: pdfs_uniq.
 Qed.
 
@@ -762,16 +741,16 @@ have: ~: p.1 =i flatten p.2.
 have: tsorted r (predT : pred T) [seq i <- tseq (rgraph r) | i \in p.1].
   have->: [seq i <- tseq (rgraph r) | i \in p.1] = tseq (rgraph r).
     by apply/all_filterP/allP=> y; rewrite inE.
-  have Hc: connect (relto predT r) =2 connect (relto predT (grel (rgraph r))).
+  have connto: connect (relto predT r) =2 connect (relto predT (grel (rgraph r))).
     by apply: eq_connect => x y; rewrite /= /rgraph /= mem_enum.
   case: (tseq_correct (rgraph r)).
-  move => [Hs Ht Ht'] _; split => //.
-    by move => x y Hx Hc0; apply (Ht _ _ Hx); rewrite -Hc.
-  move => x y Hx; rewrite Hc => Hc0; move: (Ht' _ _ Hx Hc0).
+  move=> [tsub tconn tbef] _; split => // x y xtseq.
+    by move => xyconn; apply (tconn _ _ xtseq); rewrite -connto.
+  rewrite connto => conn0; move: (tbef _ _ xtseq conn0).
   rewrite /before /= /can_to.
-  set f1 := symconnect _ _.
-  set f2 := symconnect _ _.
-  rewrite (@eq_find _ f1 f2) //; move => z; rewrite /f1 /f2.
+  set sc1 := symconnect _ _.
+  set sc2 := symconnect _ _.
+  rewrite (@eq_find _ sc1 sc2) // => z; rewrite {} /sc1 {} /sc2.
   apply: eq_symconnect => x0 y0.
   by rewrite /relto /= /rgraph mem_enum.
 elim: tseq p => [[s l]/= HR HI HE HFI HUF|].
