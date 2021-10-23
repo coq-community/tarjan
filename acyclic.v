@@ -54,7 +54,7 @@ Hypothesis g_acyclic : acyclic.
 
 Lemma acyclic_no_self_loop x : ~~ g x x.
 Proof.
-apply/negP; case => Hg; move/g_acyclic: (self_loop_cycle Hg).
+apply/negP => Hg; move/g_acyclic: (self_loop_cycle Hg).
 by move/negP; case => /=; apply/and3P; split.
 Qed.
 
@@ -99,7 +99,7 @@ move/cycle_path_symconnect; case.
   have Hp': path g x p'.
     move: Hc'; rewrite /= rcons_path.
     by move/andP => [Hp' Hgl].
-  case: Hc'; apply/negP.
+  apply/negP: Hc'.
   exact: g_acyclic.
 Qed.
 
@@ -152,7 +152,7 @@ move: Hv H_ks =>->.
 move/in_flatten/subseq_uniq => Hf.
 move/Hf: uniq_flatten {Hf}.
 rewrite /=; move/and3P; case; rewrite inE.
-move => [H_n H_u]; move/negP: H_n => H_n.
+move => H_n H_u; move/negP: H_n => H_n.
 by case: H_n; apply/orP; left.
 Qed.
 
@@ -200,7 +200,7 @@ Qed.
 Lemma all_in_sccs v : exists vs, vs \in sccs g /\ v \in vs.
 Proof.
 have H_all := all_in_flatten v.
-move/flattenP: H_all => [vs [H_vs H_in]].
+case/flattenP: H_all => vs H_vs H_in.
 by exists vs.
 Qed.
 

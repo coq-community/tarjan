@@ -689,7 +689,7 @@ rewrite mem_cat; move/orP; case.
   by rewrite inE.
 - move => Hy.
   apply/setCP.
-  case; move/setDP => [Hy' Hsy].
+  move/setDP => [Hy' Hsy].
   by move/setCP: (Hs _ Hy).
 Qed.
 
