@@ -10,4 +10,4 @@ extra_nocolors.v
 bigmin.v
 Kosaraju.v
 acyclic.v
-kosaraju_acyclic.v
+acyclic_tsorted.v
