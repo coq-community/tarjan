@@ -657,7 +657,7 @@ Qed.
 Lemma pdfs_uniq s l x : uniq l -> {subset l <= ~: s} -> uniq (pdfs (s,l) x).2.
 Proof.
 move=> uniql subls.
-move: (pdfs_correct (s,l) x (conj uniql subls)).
+have := pdfs_correct (s,l) x (conj uniql subls).
 case: (pdfs _ _) => s' l' /=.
 by have [_ [[]]//| _ [_ ->]] /= := boolP (x \in s).
 Qed.
