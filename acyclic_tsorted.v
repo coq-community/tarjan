@@ -26,20 +26,13 @@ Lemma in_nth_find_symconnect s x :
   x \in s -> nth x s (find (symconnect g x) s) = x.
 Proof.
 elim: s x => //= y s IH x.
-rewrite in_cons; move/orP; case.
-  move/eqP =>->; case: ifP => //=; move/negP.
-  by case; apply: symconnect0.
-case xy: (x == y).
-  move/eqP: xy =>->; case: ifP => // /negP.
-  by case; apply: symconnect0.
-move/negP/negP: xy => xneqy xs; case: ifP; last first.
-  by move => symcgxy; apply: IH.
-move=> symcxy; move/negP/negP/eqP: xneqy; case. 
-by move: symcxy; apply: acyclic_symconnect.
+rewrite inE => /orP[/eqP->|]; first by rewrite ifT // symconnect0.
+have [<-|/eqP xneqy]:= x =P y; first by rewrite ifT // symconnect0.
+case: ifP => [symcgxy|_] xins /=; last by apply: IH.
+by apply/sym_equal/(acyclic_symconnect acyclicg).
 Qed.
 
-Lemma acyclic_connect_before x y :
-  connect g x y -> before vs x y.
+Lemma acyclic_connect_before x y : connect g x y -> before vs x y.
 Proof.
 move => cgxy; move: (tsorted_connect_before_nth cgxy).
 by rewrite in_nth_find_symconnect.
@@ -52,26 +45,18 @@ Section AcyclicTseq.
 Variable V : finType.
 
 Lemma tseq_connect_before (g : V -> seq V) x y :
-  acyclic (grel g) -> connect (grel g) x y ->
-  before (tseq g) x y.
+  acyclic (grel g) -> connect (grel g) x y -> before (tseq g) x y.
 Proof.
-move: (tseq_correct g) => [sorted all] acycg.
-apply: acyclic_connect_before.
-- exact: acycg.
-- exact: all.
-- exact: sorted.
+move=> acycg; have [sorted all] := tseq_correct g.
+by apply: acyclic_connect_before.
 Qed.
 
 Lemma tseq_rel_connect_before (g : rel V) x y :
-  acyclic g -> connect g x y ->
-  before (tseq (rgraph g)) x y.
+  acyclic g -> connect g x y ->  before (tseq (rgraph g)) x y.
 Proof.
-move => acycg cgxy.
-apply: tseq_connect_before.
-  apply (@eq_acyclic _ g) => // x0 y0.
-  by rewrite /grel /rgraph /= mem_enum.
-rewrite -(@eq_connect _ g) // => x0 y0.
-by rewrite /grel /rgraph /= mem_enum.
+move => acycg cgxy; have rgrg := rgraphK g.
+apply: tseq_connect_before; first by apply: eq_acyclic acycg.
+by rewrite (eq_connect rgrg).
 Qed.
 
 End AcyclicTseq.
@@ -81,13 +66,11 @@ Section AcyclicKosaraju.
 Variable V : finType.
 Variable g : rel V.
 
-Definition kosaraju_acyclic :=
-  sccs_acyclic (@kosaraju V) g.
+Definition kosaraju_acyclic := sccs_acyclic (@kosaraju V) g.
 
-Lemma kosaraju_acyclicP :
-  reflect (acyclic g) kosaraju_acyclic.
+Lemma kosaraju_acyclicP : reflect (acyclic g) kosaraju_acyclic.
 Proof.
-case: (kosaraju_correct g) => Hu Hf Hc.
+have [Hu Hf Hc] := kosaraju_correct g.
 exact: sccs_acyclicP.
 Qed.
 

@@ -654,14 +654,12 @@ rewrite inE => /orP[/eqP->|//]; last exact: FI.
 by apply: Sl2F; rewrite l2E mem_cat yIl3.
 Qed.
 
-Lemma pdfs_uniq s l x :
-  uniq l -> {subset l <= ~: s} -> uniq (pdfs (s,l) x).2.
+Lemma pdfs_uniq s l x : uniq l -> {subset l <= ~: s} -> uniq (pdfs (s,l) x).2.
 Proof.
 move=> uniql subls.
-move: (pdfs_correct (s,l) x (conj uniql subls)).
+have := pdfs_correct (s,l) x (conj uniql subls).
 case: (pdfs _ _) => s' l' /=.
-case: ifP => ?; first by case => ? =>->.
-by move=> [[_ ?]].
+by have [_ [[]]//| _ [_ ->]] /= := boolP (x \in s).
 Qed.
 
 Lemma pdfs_subset s l s' l' x :
@@ -669,16 +667,13 @@ Lemma pdfs_subset s l s' l' x :
   {subset l' <= ~: s'}.
 Proof.
 move=> uniql subls pdfsl.
-move: (pdfs_correct (s,l) x (conj uniql subls)).
+have := pdfs_correct (s,l) x (conj uniql subls).
 rewrite /= pdfsl.
-case: ifP => xs; first by case =>->->.
-move=> [sle [l2 [xl2 ss' l2l' l2tsorted l2connect]]].
-rewrite ss' l2l' => y.
-rewrite mem_cat => /orP; case => yl2.
-  apply/setCP; move/setDP=> [ys yyl2].
-  by move/negP: yyl2; case; rewrite inE.
-apply/setCP; move/setDP=> [ys yyl2].
-by move/setCP: (subls _ yl2).
+have [xins [sle [l2 [xl2 -> -> l2tsorted l2connect y]]]|_ [-> ->]//] /=  
+  := boolP (x \in s).
+rewrite mem_cat => /orP[yinl2|/subls/setCP nyins].
+  apply/setCP; move/setDP=> [ys /negP[]]; first by rewrite inE.
+by apply/setCP => /setDP[ys yyl2].
 Qed.
 
 Lemma foldr_pdfs_subset l0 (s : {set T}) l s' l' :
@@ -688,26 +683,22 @@ Lemma foldr_pdfs_subset l0 (s : {set T}) l s' l' :
 Proof.
 elim: l0 s l s' l' => /= [s l' s' l0 ? ? [<- <-]//|].
 move=> x l IH s l0 s' l' uniql0 subs.
-case fld: (foldr _) => [s1 l1].
-case (IH _ _ _ _ uniql0 subs fld) => uniql1 subs1.
-move=> pdfsl; move: (pdfs_uniq x uniql1 subs1).
-rewrite pdfsl; split => //; move: pdfsl.
-exact: pdfs_subset.
+case fld: (foldr _) => [s1 l1] pdfsl.
+have [uniql1 subs1] := IH _ _ _ _ uniql0 subs fld.
+have := pdfs_uniq x uniql1 subs1.
+rewrite pdfsl; split => //.
+by apply: pdfs_subset pdfsl.
 Qed.
 
 Lemma tseq_uniq : uniq tseq.
 Proof.
-rewrite /tseq; set l := enum T.
-have ->: l = rev (rev l) by rewrite revK.
-rewrite foldl_rev.
-have uniqrevl: uniq (rev l).
-  by rewrite rev_uniq; apply: enum_uniq.
-move: uniqrevl; set l' := rev l.
-move: {l} l'; elim => //= x l IH /andP.
+rewrite /tseq -(revK (enum T)) foldl_rev.
+have uniqrevl: uniq (rev (enum T)) by rewrite rev_uniq; apply: enum_uniq.
+elim: rev uniqrevl => //= x l IH /andP.
 case fld: (foldr _ _ _) => [s l'] [xl uniql].
 have uniq0: @uniq T [::] by [].
 have sub0: {subset [::] <= ~: [set: T]} by [].
-case (foldr_pdfs_subset uniq0 sub0 fld) => uniql' subs.
+have [uniql' subs] := foldr_pdfs_subset uniq0 sub0 fld.
 exact: pdfs_uniq.
 Qed.
 
@@ -738,21 +729,16 @@ have: forall c, c \in p.2 ->
                 exists x, c =i (symconnect (relto predT r) x) by [].
 have: ~: p.1 =i flatten p.2.
  by move=> i; rewrite !inE in_nil.
+have reltoE:  relto predT r =2 relto predT (grel (rgraph r)).
+  by move=> x1 y1; rewrite rgraphK.
 have: tsorted r (predT : pred T) [seq i <- tseq (rgraph r) | i \in p.1].
   have->: [seq i <- tseq (rgraph r) | i \in p.1] = tseq (rgraph r).
     by apply/all_filterP/allP=> y; rewrite inE.
-  have connto: connect (relto predT r) =2 connect (relto predT (grel (rgraph r))).
-    by apply: eq_connect => x y; rewrite /= /rgraph /= mem_enum.
   case: (tseq_correct (rgraph r)).
   move=> [tsub tconn tbef] _; split => // x y xtseq.
-    by move => xyconn; apply (tconn _ _ xtseq); rewrite -connto.
-  rewrite connto => conn0; move: (tbef _ _ xtseq conn0).
-  rewrite /before /= /can_to.
-  set sc1 := symconnect _ _.
-  set sc2 := symconnect _ _.
-  rewrite (@eq_find _ sc1 sc2) // => z; rewrite {} /sc1 {} /sc2.
-  apply: eq_symconnect => x0 y0.
-  by rewrite /relto /= /rgraph mem_enum.
+    by move => xyconn; apply (tconn _ _ xtseq); rewrite -(eq_connect reltoE).
+  rewrite (eq_connect reltoE) => conn0; move: (tbef _ _ xtseq conn0).
+  by rewrite /before /= /can_to (eq_find (eq_symconnect reltoE _)).
 elim: tseq p => [[s l]/= HR HI HE HFI HUF|].
   split=> // i.
   by have := HFI i; rewrite cats0.
@@ -766,38 +752,29 @@ have := (@pdfs_connect (rgraph [rel x y | r y x]) s1 x xIs1).
 case: pdfs => s2 l2 /= [Ul2 s2E Dl2 xCy].
 move: HR; rewrite /= xIs1; set L := [seq _ <- _ | _] => HR.
 have l2R : l2 =i (symconnect r x).
-  move=> y; rewrite xCy.
-  set re := [rel x0 y0 | _].
-  set r2 := relto [pred u in s1] re.
-  set c1 := connect _ _ _.
-  have ->: c1 = connect r2 x y.
-    apply: eq_connect => x0 y0.
-    by rewrite /relto /= /rgraph /= mem_enum.
-  rewrite -(@connect_to_rev r L setT) //.
-  - rewrite -tsorted_symconnect //.
-      rewrite -topredE /=.
+  move=> y; rewrite xCy; set re := [rel x0 y0 | _].
+  rewrite (_ : connect _ _ _ = connect (relto [pred u in s1] re) x y); last first.
+    by apply: eq_connect => x0 y0; by rewrite /rgraph /= mem_enum.
+  rewrite -(@connect_to_rev r L setT) // => [|i|].
+  - rewrite -tsorted_symconnect.
       by apply: eq_symconnect => i j; rewrite /= !inE.
     by apply: eq_tsorted HR => i; rewrite  !inE //= topredE inE.
-  - move=> i; rewrite /= !inE mem_filter.
+  - rewrite /= !inE mem_filter.
     have := HFI i; rewrite /= mem_cat -HI /= !inE.
     case: (_ =P _) => [->|] /=; first by rewrite xIs1.
     by case: (_ \in _).
  by apply: eq_tsorted HR => i; rewrite // inE topredE inE.
-apply: IH => [|i|i|i|] //=.
+apply: IH => [|i|i|i|] /=.
 - suff->: [seq i <- l | i \in s2] =
           [seq i <- x :: L | ~~ symconnect r x i].
     by apply: tsorted_inv.
-  rewrite /= symconnect0 /=.
-  rewrite -filter_predI.
-  apply: eq_filter => y /=.
-  by rewrite s2E !inE l2R.
+  rewrite /= symconnect0 /= -filter_predI.
+  by apply: eq_filter => y /=; rewrite s2E !inE l2R.
 - by rewrite s2E !mem_cat !inE -HI negb_and negbK inE.
 - by rewrite inE => /orP[/eqP->|//]; [exists x | apply: HE].
 - have:= HFI i.
-  rewrite /= !mem_cat !inE => /or3P[->|/eqP->|->].
-  - by rewrite orbT.
-  - by rewrite xCy connect0.
-  by rewrite !orbT.
+  rewrite /= !mem_cat !inE => /or3P[->|/eqP->|->]; rewrite ?orbT //.
+  by rewrite xCy connect0.
 rewrite cat_uniq Ul2 HUF /= andbT.
 apply/hasPn => i /=.
 have/subsetP/(_ i)/= := Dl2.
