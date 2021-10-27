@@ -22,21 +22,15 @@ Lemma tsorted_connect_before_nth x y :
   before vs (nth x vs (find (symconnect g x) vs)) y.
 Proof. by move: (vs_all x); apply vs_tsorted. Qed.
 
-Lemma in_nth_find_symconnect s x :
-  x \in s -> nth x s (find (symconnect g x) s) = x.
+Lemma nth_find_symconnect s x : x \in s ->
+   nth x s (find (symconnect g x) s) = x.
 Proof.
-elim: s x => //= y s IH x.
-rewrite inE => /orP[/eqP->|]; first by rewrite ifT // symconnect0.
-have [<-|/eqP xneqy]:= x =P y; first by rewrite ifT // symconnect0.
-case: ifP => [symcgxy|_] xins /=; last by apply: IH.
-by apply/sym_equal/(acyclic_symconnect acyclicg).
+move=> xs; suff /eq_find-> : symconnect g x =1 pred1 x by rewrite nth_index.
+by move=> y; rewrite acyclic_symconnect_eq// inE eq_sym.
 Qed.
 
 Lemma acyclic_connect_before x y : connect g x y -> before vs x y.
-Proof.
-move => cgxy; move: (tsorted_connect_before_nth cgxy).
-by rewrite in_nth_find_symconnect.
-Qed.
+Proof. by move=> /tsorted_connect_before_nth; rewrite nth_find_symconnect. Qed.
 
 End AcyclicTSorted.
 
@@ -54,9 +48,8 @@ Qed.
 Lemma tseq_rel_connect_before (g : rel V) x y :
   acyclic g -> connect g x y ->  before (tseq (rgraph g)) x y.
 Proof.
-move => acycg cgxy; have rgrg := rgraphK g.
-apply: tseq_connect_before; first by apply: eq_acyclic acycg.
-by rewrite (eq_connect rgrg).
+move=> acycg cgxy; have rgK := rgraphK g.
+by apply: tseq_connect_before; rewrite (eq_acyclic rgK, eq_connect rgK).
 Qed.
 
 End AcyclicTseq.
@@ -68,10 +61,7 @@ Variable g : rel V.
 
 Definition kosaraju_acyclic := sccs_acyclic (@kosaraju V) g.
 
-Lemma kosaraju_acyclicP : reflect (acyclic g) kosaraju_acyclic.
-Proof.
-have [Hu Hf Hc] := kosaraju_correct g.
-exact: sccs_acyclicP.
-Qed.
+Lemma kosaraju_acyclicE : kosaraju_acyclic = acyclic g.
+Proof. by have [*] := kosaraju_correct g; rewrite [LHS]sccs_acyclicE. Qed.
 
 End AcyclicKosaraju.
