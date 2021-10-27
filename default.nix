@@ -1,8 +1,12 @@
-with import <nixpkgs> {};
-
-stdenv.mkDerivation rec {
-  name = "env";
-  env = buildEnv { name = name; paths = buildInputs; };
-  buildInputs = [ coq_8_8 coqPackages.mathcomp ];
-}
-  
+{ config ? {}, withEmacs ? false, print-env ? false, do-nothing ? false,
+  update-nixpkgs ? false, ci-matrix ? false,
+  override ? {}, ocaml-override ? {}, global-override ? {},
+  bundle ? null, job ? null, inNixShell ? null, src ? ./.,
+}@args:
+let auto = fetchGit {
+  url = "https://github.com/coq-community/coq-nix-toolbox.git";
+  ref = "master";
+  rev = import .nix/coq-nix-toolbox.nix;
+};
+in
+import auto ({inherit src;} // args)
