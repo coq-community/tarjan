@@ -11,74 +11,55 @@ Variable V : finType.
 Implicit Types g : rel V.
 
 Lemma cyclexx g x : g x x -> cycle g [:: x].
-Proof. by move=> gxx; rewrite /cycle /=; apply/andP. Qed.
+Proof. by move=> gxx; rewrite /cycle /= gxx. Qed.
 
 Lemma symconnect_path_cycle g x y :
   x != y -> symconnect g x y -> exists p, cycle g (x :: p).
 Proof.
-move=> xneqy /andP /= [connxy connyx].
-move/connectP: connxy; case => px pathpx lastpx.
-move/connectP: connyx; case => py pathpy lastpy.
-case: py pathpy lastpy => /=.
-  by move=> _ xeqy; move: xeqy xneqy=>->; move/negP.
-move => y' py' /andP /= [gyy' pathpy'].
+move=> /eqP xneqy /andP /= [connxy connyx].
+have /connectP[px pathpx lastpx] := connxy.
+have /connectP[[//|y' py'] /= /andP[gyy' pathpy'] lastpy'] := connyx.
 exists (px ++ belast y' py').
-rewrite rcons_cat /= {2}lastpy -lastI cat_path -lastpx.
-by apply/andP; split => //; apply/andP.
+by rewrite rcons_cat /= {2}lastpy' -lastI cat_path -lastpx pathpx /= gyy'.
 Qed.
 
 Lemma cycle_path_symconnect g x p :
-  cycle g (x :: p) -> x \in g x \/ (exists y, symconnect g x y /\ x != y).
+  cycle g (x :: p) -> ~~ g x x -> exists2 y, symconnect g x y & x != y.
 Proof.
-rewrite /=; case: p => //=; first by rewrite andbT => ?; left.
-move=> y p /andP; case xeqy: (x == y); move => [gxy pathpx].
-  by move/eqP: xeqy gxy -> => gyy; left.
-move/eqP/eqP: xeqy => xneqy; right.
-exists y; split => //; apply/andP.
-split; last by apply/connectP; exists (rcons p x) => //; rewrite last_rcons.
-by apply/connectP; exists [:: y]; first by rewrite /=; apply/andP.
+case: p => [/andP[gxx _] /negP//|y p /= /andP[gxy pathpx] ngxx].
+exists y; last by apply: contra ngxx => /eqP{2}->.
+apply/andP; split; apply/connectP; first by exists [::y]; rewrite /= ?gxy.
+by exists (rcons p x); rewrite ?last_rcons.
 Qed.
 
 Definition acyclic g := forall x p, path g x p -> ~~ cycle g (x :: p).
 
 Lemma acyclic_cyclexx g x : acyclic g -> ~~ g x x.
+Proof. by move => /(_ x [::] isT); rewrite /= andbT. Qed.
+
+Lemma acyclic_symconnect g x y : acyclic g -> symconnect g x y -> x = y.
 Proof.
-move => acycg; apply/negP => gxx; move/acycg: (cyclexx gxx).
-by move/negP; case => /=; apply/and3P; split.
+have [//|/eqP xneqy acycg symgxy] := x =P y.
+have [p cyclexp] := symconnect_path_cycle xneqy symgxy.
+suff /acycg/negP : path g x p by [].
+by move: cyclexp; rewrite /cycle rcons_path => /andP[].
 Qed.
 
-Lemma acyclic_symconnect g x y :
- acyclic g -> symconnect g x y -> x = y.
-Proof.
-move => acycg symgxy; case xeqy: (x == y); first by apply/eqP.
-move/negP/negP: xeqy => xeqy.
-case (symconnect_path_cycle xeqy symgxy) => [p pcycle].
-have pathxp: path g x p.
-  by move: pcycle; rewrite /= rcons_path; move/andP => [? ?].
-by move/negP: (acycg _ _ pathxp).
-Qed.
+Lemma symconnect_rev g : symconnect g =2 symconnect [rel x y | g y x].
+Proof. by move=> x y; rewrite /symconnect connect_rev andbC connect_rev. Qed.
 
 Lemma acyclic_rev g : acyclic g -> acyclic [rel x y | g y x].
 Proof.
-move=> acycg x p pathxp; apply/negP.
-move/cycle_path_symconnect; case => [xgx|[y [symcg xneqy]]].
-  have gxx: g x x by [].
-  by move/cyclexx: gxx; apply/negP; apply: acycg.
-have geq: g =2 [rel x y | [rel x y | g y x] y x] by [].
-have symgxy: symconnect g x y.
-  rewrite (eq_symconnect geq); move/andP: symcg => [? ?].
-  by apply/andP; split; rewrite connect_rev.
-move: (symconnect_path_cycle xneqy symgxy) => [p' cyclep'].
-have pathp': path g x p'.
-  by move: cyclep'; rewrite /= rcons_path; move/andP => [? ?].
-by apply/negP: cyclep'; apply: acycg.
+move=> acycg x p pathxp.
+apply/negP => /cycle_path_symconnect[/=|y symcg /eqP[]].
+  by apply: acyclic_cyclexx.
+by apply: acyclic_symconnect acycg _; rewrite symconnect_rev.
 Qed.
 
 Lemma eq_acyclic g g' : g =2 g' -> acyclic g -> acyclic g'.
 Proof.
-move => eqg acycg x p; rewrite -(eq_path eqg).
-move/acycg; move/negP => cycg; apply/negP => cycg'.
-by case: cycg; rewrite /cycle (eq_path eqg).
+move => eqg acycg x p; rewrite -(eq_path eqg) => /acycg.
+by apply: contra; rewrite /cycle (eq_path eqg).
 Qed.
 
 End Acyclic.
@@ -94,123 +75,63 @@ Hypothesis all_in_flatten : forall v : V, v \in (flatten (sccs g)).
 Hypothesis class_symconnect :
   forall c, c \in sccs g -> exists x, forall y, (y \in c) = symconnect g x y.
 
-Lemma in_subseq_flatten (A : seq (seq V)) s :
-  s \in A -> subseq s (flatten A).
+Lemma in_subseq_flatten (A : seq (seq V)) s :  s \in A -> subseq s (flatten A).
 Proof.
-elim: A => //= vs c IH invc.
-have eqin: s = vs \/ s \in c.
-  move/orP: invc; case; last by right.
-  by move/eqP; left.
-case: eqin => [eqsvs|sc]; first by rewrite eqsvs prefix_subseq.
-have ->: s = [::] ++ s by [].
-apply cat_subseq; first exact: sub0seq.
-exact: IH.
+elim: A => //= vs c IH.
+by rewrite in_cons => /orP[/eqP->|/IH/subseq_trans->//];
+   [exact: prefix_subseq | exact: suffix_subseq].
 Qed.
 
-Lemma non_singleton_sccs_neq v v' vs :
-  [:: v, v' & vs] \in sccs g -> v != v'.
+Lemma non_singleton_sccs_neq v v' vs : [:: v, v' & vs] \in sccs g -> v != v'.
 Proof.
-move=> vsccs; apply/negP; move/eqP=> veqv'.
-move: veqv' vsccs =>->.
-move/in_subseq_flatten/subseq_uniq => uniqsccs.
-move/uniqsccs: uniq_flatten {uniqsccs}.
-rewrite /=; move/and3P; case.
-by rewrite inE eqxx.
+move=> vsccs; suff : uniq [:: v, v' & vs] by rewrite /= in_cons negb_or; case: eqP.
+by apply: subseq_uniq (in_subseq_flatten vsccs) uniq_flatten.
 Qed.
 
 Lemma non_singleton_sccs_cycle v v' vs :
   [:: v, v' & vs] \in sccs g -> exists x p, cycle g (x :: p).
 Proof.
-move => insccs; move: (class_symconnect insccs).
-move => [x symcx].
-have vneqv' := non_singleton_sccs_neq insccs.
-have inv: v \in [:: v, v' & vs].
-  by rewrite inE; apply/orP; left.
-have inv': v' \in [:: v, v' & vs].
-  by rewrite inE; apply/orP; right; apply/orP; left.
-move: (inv) (inv') => {inv inv'}.
-rewrite (symcx v) (symcx v') /symconnect.
-move/andP => [cgxv cgvx]; move/andP => [cgxv' cgv'x].
-move/connectP: cgxv => [pxv pathpxv] lastpxv.
-move/connectP: cgvx => [pvx pathpvx] lastpvx.
-move/connectP: cgxv' => [pxv' pathpxv'] lastpxv'.
-move/connectP: cgv'x => [pv'x pathpv'x] lastpv'x.
-have cgvv': connect g v v'.
-  apply/connectP.
-  exists (pvx ++ pxv'); last by rewrite last_cat -lastpvx.
-  by rewrite cat_path -lastpvx pathpvx pathpxv'.
-have cgv'v: connect g v' v.
-  apply/connectP.
-  exists (pv'x ++ pxv); last by rewrite last_cat -lastpv'x.
-  by rewrite cat_path -lastpv'x pathpv'x pathpxv.
-have symgvv': symconnect g v v' by apply/andP.
-have [p pathp] := symconnect_path_cycle vneqv' symgvv'.
-by exists v, p.
+move => insccs; have [x symcx] := class_symconnect insccs.
+have [xeqv|/eqP xneqv] := x =P v.
+  exists v; apply: symconnect_path_cycle (non_singleton_sccs_neq insccs) _ => //.
+  by rewrite -xeqv -symcx !inE eqxx orbT.
+exists x; apply: symconnect_path_cycle xneqv _.
+by rewrite -symcx inE eqxx.
 Qed.
 
-Lemma all_in_sccs v : exists vs, vs \in sccs g /\ v \in vs.
-Proof.
-by case/flattenP: (all_in_flatten v) => vs ? ?; exists vs.
-Qed.
+Lemma all_in_sccs v : exists2 vs, vs \in sccs g & v \in vs.
+Proof. by case/flattenP: (all_in_flatten v) => vs ? ?; exists vs. Qed.
 
 Lemma symconnect_neq_sccs x y :
-  symconnect g x y -> x != y ->
-  exists v v' vs, [:: v, v' & vs] \in sccs g.
+  symconnect g x y -> x != y -> exists v v' vs, [:: v, v' & vs] \in sccs g.
 Proof.
 move => symcgxy xneqy.
-have [vs [vsg xvs]] := all_in_sccs x.
+have [vs vsg xvs] := all_in_sccs x.
 have [x' symcgyvs] := class_symconnect vsg.
-move: (xvs); rewrite (symcgyvs x) => symcgx'x.
-have symcgx'y: symconnect g x' y.
-  move/andP: symcgx'x => [cgx'x cgxx'].
-  move/andP: symcgxy => [cgxy cgyx]; apply/andP; split.
-    by move: cgx'x cgxy; apply: connect_trans.
-  by move: cgyx cgxx'; apply: connect_trans.
-move: (symcgx'y) => {symcgx'y}.
-rewrite -symcgyvs {symcgyvs symcgx'x x'}.
-case: vs vsg xvs => // v.
-case; last by move => v' vs vsg xvs yvs; exists v, v', vs.
-rewrite 2!inE => vg; move/eqP => xeqv; move/eqP => yeqv.
-by move/negP: xneqy; rewrite xeqv yeqv.
+case: vs xvs symcgyvs vsg => // [v [|v' vs]]; last first.
+  by move=> *; exists v; exists v'; exists vs.
+rewrite inE => /eqP<- _ /class_symconnect[z symcgzyE].
+suff : symconnect g z y by rewrite -symcgzyE inE eq_sym (negPf xneqy).
+apply: symconnect_trans symcgxy.
+by rewrite -symcgzyE inE.
 Qed.
 
 Definition class_acyclic (c : seq V) :=
-match c with
-| [::] => true  
-| [:: v] => ~~ g v v
-| [:: _, _ & _] => false
-end.
+  if c is [:: v & vs] then (vs == [::]) && ~~ g v v else true.
 
-Definition sccs_acyclic :=
- all [pred c | class_acyclic c] (sccs g).
+Definition sccs_acyclic := all [pred c | class_acyclic c] (sccs g).
 
 Lemma sccs_acyclicP : reflect (acyclic g) sccs_acyclic.
 Proof.
-apply: (iffP idP).
-  move/allP => /= insccs v p pathgvp; apply/negP => cycgvp.
-  move/cycle_path_symconnect: cycgvp.
-  case; last first.
-    move=> [y [symcgvy vneqy]].
-    move: (symconnect_neq_sccs symcgvy vneqy).
-    move=> [v0 [v1 [vs vssccs]]].
-    by move/insccs: vssccs.
-  have [vs [vssccs vvs]] := all_in_sccs v.
-  move: vssccs vvs; move/insccs.
-  case: vs => //= v'; case => //=.
-  move/negP; rewrite inE => gvv'.
-  by move/eqP=>->.
-move=> acycg; apply/allP.
-case => //= v; case => //=.
-  move=> vinsccs; apply/negP => gvv.
-  have cycgv: cycle g [:: v] by apply/andP.
-  contradict cycgv; apply/negP.
-  exact: acycg.
-move => v' vs; move/non_singleton_sccs_cycle.
-move => [x [p cycg]]; move: (cycg).
-rewrite /= rcons_path.
-move/andP => [p' gp'].
-contradict cycg; apply/negP.
-exact: acycg.
+apply: (iffP allP) => [insccs v p pathgvp|acycg [|v [|v1 vs] scssv]] //=.
+- apply/negP => /cycle_path_symconnect[| x cymcgvx xneqy].
+    have [/= [|v1 [|v2 vs]] /insccs] //= := all_in_sccs v.
+    by rewrite inE => ngv1v1 /eqP->.
+  by have [v1 [v2 [vs /insccs]]] := symconnect_neq_sccs cymcgvx xneqy.
+- by apply: acyclic_cyclexx.
+have /non_singleton_sccs_cycle[x [p cyxp]] := scssv.
+suff /acycg/negP : path g x p by [].
+by move: cyxp; rewrite /= rcons_path => /andP[].
 Qed.
 
 End AcyclicSCCS.
