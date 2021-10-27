@@ -54,11 +54,9 @@ Qed.
 Lemma tseq_rel_connect_before (g : rel V) x y :
   acyclic g -> connect g x y ->  before (tseq (rgraph g)) x y.
 Proof.
-move => acycg cgxy.
-have grelE : grel (rgraph g) =2 g => [x0 y0|].
-   by rewrite /grel /rgraph /= mem_enum.
+move => acycg cgxy; have rgrg := rgraphK g.
 apply: tseq_connect_before; first by apply: eq_acyclic acycg.
-by rewrite (eq_connect grelE).
+by rewrite (eq_connect rgrg).
 Qed.
 
 End AcyclicTseq.

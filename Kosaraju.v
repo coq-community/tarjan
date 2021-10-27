@@ -729,11 +729,11 @@ have: forall c, c \in p.2 ->
                 exists x, c =i (symconnect (relto predT r) x) by [].
 have: ~: p.1 =i flatten p.2.
  by move=> i; rewrite !inE in_nil.
+have reltoE:  relto predT r =2 relto predT (grel (rgraph r)).
+  by move=> x1 y1; rewrite rgraphK.
 have: tsorted r (predT : pred T) [seq i <- tseq (rgraph r) | i \in p.1].
   have->: [seq i <- tseq (rgraph r) | i \in p.1] = tseq (rgraph r).
     by apply/all_filterP/allP=> y; rewrite inE.
-  have reltoE:  relto predT r =2 relto predT (grel (rgraph r)).
-    by move=> x1 y1; rewrite /= /rgraph /= mem_enum.
   case: (tseq_correct (rgraph r)).
   move=> [tsub tconn tbef] _; split => // x y xtseq.
     by move => xyconn; apply (tconn _ _ xtseq); rewrite -(eq_connect reltoE).
@@ -752,34 +752,29 @@ have := (@pdfs_connect (rgraph [rel x y | r y x]) s1 x xIs1).
 case: pdfs => s2 l2 /= [Ul2 s2E Dl2 xCy].
 move: HR; rewrite /= xIs1; set L := [seq _ <- _ | _] => HR.
 have l2R : l2 =i (symconnect r x).
-  move=> y; rewrite xCy.
-  set re := [rel x0 y0 | _]; set r2 := relto [pred u in s1] re.
-  rewrite (_ : connect _ _ _ = connect r2 x y); last first.
-    by apply: eq_connect => x0 y0; rewrite /relto /= /rgraph /= mem_enum.
-  rewrite -(@connect_to_rev r L setT) //.
-  - rewrite -tsorted_symconnect //.
+  move=> y; rewrite xCy; set re := [rel x0 y0 | _].
+  rewrite (_ : connect _ _ _ = connect (relto [pred u in s1] re) x y); last first.
+    by apply: eq_connect => x0 y0; by rewrite /rgraph /= mem_enum.
+  rewrite -(@connect_to_rev r L setT) // => [|i|].
+  - rewrite -tsorted_symconnect.
       by apply: eq_symconnect => i j; rewrite /= !inE.
     by apply: eq_tsorted HR => i; rewrite  !inE //= topredE inE.
-  - move=> i; rewrite /= !inE mem_filter.
+  - rewrite /= !inE mem_filter.
     have := HFI i; rewrite /= mem_cat -HI /= !inE.
     case: (_ =P _) => [->|] /=; first by rewrite xIs1.
     by case: (_ \in _).
  by apply: eq_tsorted HR => i; rewrite // inE topredE inE.
-apply: IH => [|i|i|i|] //=.
+apply: IH => [|i|i|i|] /=.
 - suff->: [seq i <- l | i \in s2] =
           [seq i <- x :: L | ~~ symconnect r x i].
     by apply: tsorted_inv.
-  rewrite /= symconnect0 /=.
-  rewrite -filter_predI.
-  apply: eq_filter => y /=.
-  by rewrite s2E !inE l2R.
+  rewrite /= symconnect0 /= -filter_predI.
+  by apply: eq_filter => y /=; rewrite s2E !inE l2R.
 - by rewrite s2E !mem_cat !inE -HI negb_and negbK inE.
 - by rewrite inE => /orP[/eqP->|//]; [exists x | apply: HE].
 - have:= HFI i.
-  rewrite /= !mem_cat !inE => /or3P[->|/eqP->|->].
-  - by rewrite orbT.
-  - by rewrite xCy connect0.
-  by rewrite !orbT.
+  rewrite /= !mem_cat !inE => /or3P[->|/eqP->|->]; rewrite ?orbT //.
+  by rewrite xCy connect0.
 rewrite cat_uniq Ul2 HUF /= andbT.
 apply/hasPn => i /=.
 have/subsetP/(_ i)/= := Dl2.
