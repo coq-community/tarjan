@@ -56,6 +56,10 @@ dependencies:
     version: '{(>= "1.12.0" & < "1.14~") | (= "dev")}'
   description: |-
     [MathComp ssreflect 1.12 or later](https://math-comp.github.io)
+- opam:
+    name: coq-mathcomp-fingroup
+  description: |-
+    [MathComp fingroup](https://math-comp.github.io)
 
 tested_coq_opam_versions:
 - version: 'coq-dev'
