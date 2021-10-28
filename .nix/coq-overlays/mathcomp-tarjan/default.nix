@@ -14,7 +14,7 @@ with lib; mkCoqDerivation {
   propagatedBuildInputs = [ mathcomp-ssreflect mathcomp-fingroup ];
 
   meta = {
-    description = "Proofs of Tarjan adn Kosaraju connected components algorithms";
+    description = "Proofs of Tarjan and Kosaraju connected components algorithms";
     license = licenses.cecill-b;
   };
 }
