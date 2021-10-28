@@ -782,9 +782,3 @@ by rewrite -HI /= !inE; do 2 case: (_ \in _).
 Qed.
 
 End Kosaraju.
-
-Print rpdfs.
-Print pdfs.
-Print tseq.
-Print kosaraju.
-Print dfs.
