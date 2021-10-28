@@ -28,6 +28,7 @@ sorting with extended guarantees for acyclic graphs.
 - Compatible Coq versions: 8.10 or later
 - Additional dependencies:
   - [MathComp ssreflect 1.12 or later](https://math-comp.github.io)
+  - [MathComp fingroup](https://math-comp.github.io)
 - Coq namespace: `mathcomp.tarjan`
 - Related publication(s):
   - [Formal Proofs of Tarjan's Strongly Connected Components Algorithm in Why3, Coq and Isabelle](https://hal.inria.fr/hal-01906155) doi:[10.4230/LIPIcs.ITP.2019.13](https://doi.org/10.4230/LIPIcs.ITP.2019.13)
