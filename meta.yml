@@ -1,0 +1,111 @@
+---
+fullname: Tarjan and Kosaraju
+shortname: tarjan
+organization: math-comp
+opam_name: coq-mathcomp-tarjan
+community: false
+action: true
+coqdoc: false
+
+synopsis: Strongly connected component algorithms by Tarjan and Kosaraju using Coq and MathComp
+
+description: |-
+  This development contains formalizations and correctness proofs using Coq and the Mathematical
+  Components library of algorithms originally due to Kosaraju and Tarjan for finding strongly
+  connected components in finite graphs. It also contains a verified implementation of topological
+  sorting with extended guarantees for acyclic graphs.
+
+publications:
+- pub_title: Formal Proofs of Tarjan's Strongly Connected Components Algorithm in Why3, Coq and Isabelle
+  pub_url: https://hal.inria.fr/hal-01906155
+  pub_doi: 10.4230/LIPIcs.ITP.2019.13
+- pub_title: Formally-Proven Kosaraju's algorithm
+  pub_url: https://hal.inria.fr/hal-01095533
+
+authors:
+- name: Cyril Cohen
+  initial: true
+- name: Jean-Jacques Lévy
+  initial: true
+- name: Karl Palmskog
+- name: Laurent Théry
+  initial: true
+
+maintainers:
+- name: Cyril Cohen
+  nickname: CohenCyril
+- name: Laurent Théry
+  nickname: thery
+
+opam-file-maintainer: Cyril Cohen <cyril.cohen@inria.fr>
+
+opam-file-version: dev
+
+license:
+  fullname: CeCILL-B
+  identifier: CECILL-B
+  file: CeCILL-B
+
+supported_coq_versions:
+  text: '8.10 or later'
+  opam: '{(>= "8.10" & < "8.15~") | (= "dev")}'
+
+dependencies:
+- opam:
+    name: coq-mathcomp-ssreflect
+    version: '{(>= "1.12.0" & < "1.14~") | (= "dev")}'
+  description: |-
+    [MathComp ssreflect 1.12 or later](https://math-comp.github.io)
+
+tested_coq_opam_versions:
+- version: 'coq-dev'
+  repo: 'mathcomp/mathcomp-dev'
+- version: 'coq-8.14'
+  repo: 'mathcomp/mathcomp-dev'
+- version: 'coq-8.13'
+  repo: 'mathcomp/mathcomp-dev'
+- version: 'coq-8.12'
+  repo: 'mathcomp/mathcomp-dev'
+- version: 'coq-8.11'
+  repo: 'mathcomp/mathcomp-dev'
+- version: '1.12.0-coq-8.14'
+  repo: 'mathcomp/mathcomp'
+- version: '1.12.0-coq-8.13'
+  repo: 'mathcomp/mathcomp'
+- version: '1.12.0-coq-8.12'
+  repo: 'mathcomp/mathcomp'
+- version: '1.12.0-coq-8.11'
+  repo: 'mathcomp/mathcomp'
+- version: '1.12.0-coq-8.10'
+  repo: 'mathcomp/mathcomp'
+
+namespace: mathcomp.tarjan
+
+keywords:
+- name: strongly connected components
+- name: topological sorting
+- name: Kosaraju
+- name: Tarjan
+- name: acyclicity
+- name: graph theory
+
+categories:
+- name: Computer Science/Graph Theory
+
+documentation: |-
+  ## Main files
+
+  ### Proofs of Tarjan strongly connected component algorithm (independent from each other)
+  * `tarjan_rank.v` *(751 sloc)*: proof with rank
+  * `tarjan_rank_bigmin.v` *(806 sloc)*: same proof but with a `\min_` instead of multiple inequalities on the output rank
+  * `tarjan_num.v` *(1029 sloc)*: same proof as `tarjan_rank_bigmin.v` but with serial numbers instead of ranks
+  * `tarjan_nocolor.v` *(548 sloc)*: new proof, with ranks and without colors, less fields in environement and less invariants, preconditions and postconditions.
+  * `tarjan_nocolor_optim.v` *(560 sloc)*: same proof as `tarjan_nocolor.v`, but with the serial number field of the environement restored, and passing around stack extensions as sets.
+
+  ### Proof of Kosaraju strongly connected component algorithm
+  * `Kosaraju.v` *(679 sloc)*: proof of Kosaraju connected component algorithm
+
+  ### Extra library files
+  * `bigmin.v` *(137 sloc)*: extra library to deal with \min(i in A) F i
+  * `extra.v` *(265 sloc)*: naive definitions of strongly connected components and various basic extentions of mathcomp libraries on paths and fintypes.
+---
