@@ -1,13 +1,13 @@
--R . mathcomp.tarjan
+-R theories mathcomp.tarjan
 -arg -w -arg -notation-overridden
 
-tarjan_num.v
-tarjan_nocolors.v
-tarjan_rank.v
-tarjan_rank_bigmin.v
-extra.v
-extra_nocolors.v
-bigmin.v
-Kosaraju.v
-acyclic.v
-acyclic_tsorted.v
+theories/tarjan_num.v
+theories/tarjan_nocolors.v
+theories/tarjan_rank.v
+theories/tarjan_rank_bigmin.v
+theories/extra.v
+theories/extra_nocolors.v
+theories/bigmin.v
+theories/Kosaraju.v
+theories/acyclic.v
+theories/acyclic_tsorted.v
