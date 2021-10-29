@@ -107,7 +107,7 @@ documentation: |-
   * `tarjan_nocolor_optim.v` *(560 sloc)*: same proof as `tarjan_nocolor.v`, but with the serial number field of the environement restored, and passing around stack extensions as sets.
 
   ### Proof of Kosaraju strongly connected component algorithm
-  * `Kosaraju.v` *(679 sloc)*: proof of Kosaraju connected component algorithm
+  * `kosaraju.v` *(679 sloc)*: proof of Kosaraju connected component algorithm
 
   ### Extra library files
   * `bigmin.v` *(137 sloc)*: extra library to deal with \min(i in A) F i

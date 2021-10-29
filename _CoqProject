@@ -8,6 +8,6 @@ theories/tarjan_rank_bigmin.v
 theories/extra.v
 theories/extra_nocolors.v
 theories/bigmin.v
-theories/Kosaraju.v
+theories/kosaraju.v
 theories/acyclic.v
 theories/acyclic_tsorted.v

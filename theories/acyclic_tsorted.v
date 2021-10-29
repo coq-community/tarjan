@@ -1,5 +1,5 @@
 From mathcomp Require Import all_ssreflect.
-Require Import extra acyclic Kosaraju.
+Require Import extra acyclic kosaraju.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
