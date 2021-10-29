@@ -4,8 +4,7 @@ with lib; mkCoqDerivation {
 
   namePrefix = [ "coq" "mathcomp" ];
   pname = "tarjan";
-
-  owner = "CohenCyril";
+  owner = "math-comp";
 
   inherit version;
   defaultVersion = null;
