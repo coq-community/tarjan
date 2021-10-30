@@ -12,8 +12,8 @@ Follow the instructions on https://github.com/coq-community/templates to regener
 
 
 
-This development contains formalizations and correctness proofs using Coq and the Mathematical
-Components library of algorithms originally due to Kosaraju and Tarjan for finding strongly
+This development contains formalizations and correctness proofs, using Coq and the Mathematical
+Components library, of algorithms originally due to Kosaraju and Tarjan for finding strongly
 connected components in finite graphs. It also contains a verified implementation of topological
 sorting with extended guarantees for acyclic graphs.
 
@@ -56,16 +56,18 @@ make install
 
 ## Main files
 
-### Proofs of Tarjan strongly connected component algorithm (independent from each other)
-* `tarjan_rank.v` *(751 sloc)*: proof with rank
-* `tarjan_rank_bigmin.v` *(806 sloc)*: same proof but with a `\min_` instead of multiple inequalities on the output rank
-* `tarjan_num.v` *(1029 sloc)*: same proof as `tarjan_rank_bigmin.v` but with serial numbers instead of ranks
-* `tarjan_nocolor.v` *(548 sloc)*: new proof, with ranks and without colors, less fields in environement and less invariants, preconditions and postconditions.
-* `tarjan_nocolor_optim.v` *(560 sloc)*: same proof as `tarjan_nocolor.v`, but with the serial number field of the environement restored, and passing around stack extensions as sets.
+### Extra library files
+* `bigmin.v`: extra library to deal with `\min(i in A) F i`
+* `extra.v`: naive definitions of strongly connected components and various basic extentions of mathcomp libraries on paths and fintypes
+* `acyclic.v`: definition of acyclic graphs and proof that acyclicity can be determined by knowing strongly connected components
 
 ### Proof of Kosaraju strongly connected component algorithm
-* `kosaraju.v` *(679 sloc)*: proof of Kosaraju connected component algorithm
+* `kosaraju.v`: proof of topological sorting and Kosaraju connected component algorithm
+* `acyclic_tsorted.v`: properties of topological sorting in acyclic graphs
 
-### Extra library files
-* `bigmin.v` *(137 sloc)*: extra library to deal with \min(i in A) F i
-* `extra.v` *(265 sloc)*: naive definitions of strongly connected components and various basic extentions of mathcomp libraries on paths and fintypes.
+### Proofs of Tarjan strongly connected component algorithm (independent from each other)
+* `tarjan_rank.v`: proof with rank
+* `tarjan_rank_bigmin.v`: same proof but with a `\min_` instead of multiple inequalities on the output rank
+* `tarjan_num.v`: same proof as `tarjan_rank_bigmin.v` but with serial numbers instead of ranks
+* `tarjan_nocolor.v`: new proof, with ranks and without colors, less fields in environement and less invariants, preconditions and postconditions.
+* `tarjan_nocolor_optim.v`: same proof as `tarjan_nocolor.v`, but with the serial number field of the environement restored, and passing around stack extensions as sets

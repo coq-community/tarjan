@@ -12,8 +12,8 @@ license: "CECILL-B"
 
 synopsis: "Strongly connected component algorithms by Tarjan and Kosaraju using Coq and MathComp"
 description: """
-This development contains formalizations and correctness proofs using Coq and the Mathematical
-Components library of algorithms originally due to Kosaraju and Tarjan for finding strongly
+This development contains formalizations and correctness proofs, using Coq and the Mathematical
+Components library, of algorithms originally due to Kosaraju and Tarjan for finding strongly
 connected components in finite graphs. It also contains a verified implementation of topological
 sorting with extended guarantees for acyclic graphs."""
 
