@@ -1,3 +1,4 @@
+From HB Require Import structures.
 From mathcomp
 Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq choice fintype tuple.
 From mathcomp
@@ -62,8 +63,8 @@ Proof. by move=> ???; apply/val_inj/minnA. Qed.
 Lemma minoC : commutative min.
 Proof. by move=> ??; apply/val_inj/minnC. Qed.
 
-Canonical ord_minn_monoid := Monoid.Law minoA minTo minoT.
-Canonical ord_minn_comoid := Monoid.ComLaw minoC.
+HB.instance Definition _ := Monoid.isComLaw.Build 'I_n.+1 T min
+  minoA minoC minTo.
 
 End ord_min.
 
