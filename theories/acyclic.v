@@ -5,8 +5,8 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Hint Resolve equiv_refl equiv_sym equiv_trans : core.
-Hint Resolve connect0 symconnect0 : core.
+#[export] Hint Resolve equiv_refl equiv_sym equiv_trans : core.
+#[export] Hint Resolve connect0 symconnect0 : core.
 
 Section EquivalenceExtra.
 Variable (T : Type).
@@ -52,7 +52,7 @@ Coercion equivalence_rel_trans : equivalence_rel >-> transitive.
 
 Notation EquivalenceRel R Req := (EquivRel R Req Req Req).
 
-Hint Resolve equiv_equivalence_rel.
+#[export] Hint Resolve equiv_equivalence_rel.
 
 Section EquivalencePartitionExtra.
 
@@ -303,7 +303,7 @@ Qed.
 
 End Acyclic.
 
-Hint Resolve connect_rtclosed equiv_rtclosed : core.
+#[export] Hint Resolve connect_rtclosed equiv_rtclosed : core.
 Arguments preacyclicP {V g}.
 Arguments preacyclic_sccsP {V g}.
 Arguments acyclicP {V g}.
