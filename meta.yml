@@ -3,7 +3,7 @@ fullname: Tarjan and Kosaraju
 shortname: tarjan
 organization: math-comp
 opam_name: coq-mathcomp-tarjan
-community: false
+community: true
 action: true
 coqdoc: false
 
@@ -34,8 +34,8 @@ authors:
 maintainers:
 - name: Cyril Cohen
   nickname: CohenCyril
-- name: Laurent Théry
-  nickname: thery
+- name: Karl Palmskog
+  nickname: palmskog
 
 opam-file-maintainer: Cyril Cohen <cyril.cohen@inria.fr>
 
@@ -47,32 +47,30 @@ license:
   file: CeCILL-B
 
 supported_coq_versions:
-  text: '8.10 or later'
-  opam: '{(>= "8.10" & < "8.16~") | (= "dev")}'
+  text: '8.12 or later'
+  opam: '{>= "8.12"}'
 
 dependencies:
 - opam:
     name: coq-mathcomp-ssreflect
-    version: '{(>= "1.12.0" & < "1.15~") | (= "dev")}'
+    version: '{>= "1.12.0" & < "1.18~"}'
   description: |-
-    [MathComp ssreflect 1.12 or later](https://math-comp.github.io)
+    [MathComp ssreflect 1.12 to 1.17](https://math-comp.github.io)
 - opam:
     name: coq-mathcomp-fingroup
   description: |-
     [MathComp fingroup](https://math-comp.github.io)
 
 tested_coq_opam_versions:
-- version: 'coq-dev'
-  repo: 'mathcomp/mathcomp-dev'
-- version: 'coq-8.15'
-  repo: 'mathcomp/mathcomp-dev'
-- version: 'coq-8.14'
-  repo: 'mathcomp/mathcomp-dev'
+- version: '1.17.0-coq-8.17'
+  repo: 'mathcomp/mathcomp'
+- version: '1.16.0-coq-8.16'
+  repo: 'mathcomp/mathcomp'
+- version: '1.15.0-coq-8.15'
+  repo: 'mathcomp/mathcomp'
 - version: '1.14.0-coq-8.15'
   repo: 'mathcomp/mathcomp'
 - version: '1.14.0-coq-8.14'
-  repo: 'mathcomp/mathcomp'
-- version: '1.14.0-coq-8.11'
   repo: 'mathcomp/mathcomp'
 - version: '1.13.0-coq-8.15'
   repo: 'mathcomp/mathcomp'
@@ -83,8 +81,6 @@ tested_coq_opam_versions:
 - version: '1.12.0-coq-8.14'
   repo: 'mathcomp/mathcomp'
 - version: '1.12.0-coq-8.12'
-  repo: 'mathcomp/mathcomp'
-- version: '1.12.0-coq-8.10'
   repo: 'mathcomp/mathcomp'
 
 namespace: mathcomp.tarjan

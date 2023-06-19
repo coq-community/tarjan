@@ -5,10 +5,21 @@ Follow the instructions on https://github.com/coq-community/templates to regener
 # Tarjan and Kosaraju
 
 [![Docker CI][docker-action-shield]][docker-action-link]
+[![Contributing][contributing-shield]][contributing-link]
+[![Code of Conduct][conduct-shield]][conduct-link]
+[![Zulip][zulip-shield]][zulip-link]
 
 [docker-action-shield]: https://github.com/math-comp/tarjan/workflows/Docker%20CI/badge.svg?branch=master
 [docker-action-link]: https://github.com/math-comp/tarjan/actions?query=workflow:"Docker%20CI"
 
+[contributing-shield]: https://img.shields.io/badge/contributions-welcome-%23f7931e.svg
+[contributing-link]: https://github.com/coq-community/manifesto/blob/master/CONTRIBUTING.md
+
+[conduct-shield]: https://img.shields.io/badge/%E2%9D%A4-code%20of%20conduct-%23f15a24.svg
+[conduct-link]: https://github.com/coq-community/manifesto/blob/master/CODE_OF_CONDUCT.md
+
+[zulip-shield]: https://img.shields.io/badge/chat-on%20zulip-%23c1272d.svg
+[zulip-link]: https://coq.zulipchat.com/#narrow/stream/237663-coq-community-devs.20.26.20users
 
 
 
@@ -24,10 +35,13 @@ sorting with extended guarantees for acyclic graphs.
   - Jean-Jacques Lévy (initial)
   - Karl Palmskog
   - Laurent Théry (initial)
+- Coq-community maintainer(s):
+  - Cyril Cohen ([**@CohenCyril**](https://github.com/CohenCyril))
+  - Karl Palmskog ([**@palmskog**](https://github.com/palmskog))
 - License: [CeCILL-B](CeCILL-B)
-- Compatible Coq versions: 8.10 or later
+- Compatible Coq versions: 8.12 or later
 - Additional dependencies:
-  - [MathComp ssreflect 1.12 or later](https://math-comp.github.io)
+  - [MathComp ssreflect 1.12 to 1.17](https://math-comp.github.io)
   - [MathComp fingroup](https://math-comp.github.io)
 - Coq namespace: `mathcomp.tarjan`
 - Related publication(s):
