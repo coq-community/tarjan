@@ -39,9 +39,9 @@ sorting with extended guarantees for acyclic graphs.
   - Cyril Cohen ([**@CohenCyril**](https://github.com/CohenCyril))
   - Karl Palmskog ([**@palmskog**](https://github.com/palmskog))
 - License: [CeCILL-B](CeCILL-B)
-- Compatible Coq versions: 8.12 or later
+- Compatible Coq versions: 8.16 or later
 - Additional dependencies:
-  - [MathComp ssreflect 1.12 to 1.17](https://math-comp.github.io)
+  - [MathComp ssreflect 2.0 or later](https://math-comp.github.io)
   - [MathComp fingroup](https://math-comp.github.io)
 - Coq namespace: `mathcomp.tarjan`
 - Related publication(s):

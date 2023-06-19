@@ -1,5 +1,6 @@
 -R theories mathcomp.tarjan
 -arg -w -arg -notation-overridden
+-arg -w -arg -redundant-canonical-projection
 
 theories/tarjan_num.v
 theories/tarjan_nocolors.v

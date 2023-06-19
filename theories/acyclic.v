@@ -52,7 +52,7 @@ Coercion equivalence_rel_trans : equivalence_rel >-> transitive.
 
 Notation EquivalenceRel R Req := (EquivRel R Req Req Req).
 
-#[export] Hint Resolve equiv_equivalence_rel.
+#[export] Hint Resolve equiv_equivalence_rel : core.
 
 Section EquivalencePartitionExtra.
 

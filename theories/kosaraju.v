@@ -20,7 +20,7 @@ Variable r : rel T.
 Local Notation "x -[]-> y" :=
   (connect r x y) (at level 10, format "x  -[]->  y") .
 
-Local Notation connect_to s :=  (connect (rel_of_simpl_rel (relto s r))).
+Local Notation connect_to s :=  (connect (rel_of_simpl (relto s r))).
 
 Local Notation "x -[ s ]-> y" := (connect_to s x y)
   (at level 10, format "x  -[ s ]->  y").
@@ -28,9 +28,9 @@ Local Notation "x -[ s ]-> y" := (connect_to s x y)
 Local Notation "x =[]= y" := (symconnect r x y)
   (at level 10, format "x  =[]=  y").
 
-Local Notation symconnect_to a := (symconnect (rel_of_simpl_rel (relto a r))).
+Local Notation symconnect_to a := (symconnect (rel_of_simpl (relto a r))).
 
-Local Notation "x =[ a ]= y" := (symconnect (rel_of_simpl_rel (relto a r)) x y)
+Local Notation "x =[ a ]= y" := (symconnect (rel_of_simpl (relto a r)) x y)
   (at level 10, format "x  =[ a ]=  y").
 
 Lemma connect_to_C1r x y z :
@@ -175,7 +175,7 @@ Section ConnectRelto.
 Variable r : rel T.
 
 Local Notation "x -[ s ]-> y" :=
-  (connect (rel_of_simpl_rel (relto s r)) x y)
+  (connect (rel_of_simpl (relto s r)) x y)
   (at level 10, format "x  -[ s ]->  y").
 
 Local Notation "x -[]-> y" :=
@@ -184,7 +184,7 @@ Local Notation "x -[]-> y" :=
 Local Notation "x =[]= y" := (symconnect r x y)
   (at level 10, format "x  =[]=  y").
 
-Local Notation "x =[ a ]= y" := (symconnect (rel_of_simpl_rel (relto a r)) x y)
+Local Notation "x =[ a ]= y" := (symconnect (rel_of_simpl (relto a r)) x y)
   (at level 10, format "x  =[ a ]=  y").
 
 Local Notation "C[ x ]_( a , l )" := (can_to r x a l)
@@ -481,7 +481,7 @@ Definition pdfs := rpdfs #|T|.
 Definition tseq := (foldl pdfs (setT, [::]) (enum T)).2.
 
 Local Notation "x -[ l ]-> y" :=
-  (connect (rel_of_simpl_rel (relto l (grel g))) x y)
+  (connect (rel_of_simpl (relto l (grel g))) x y)
   (at level 10, format "x  -[ l ]->  y").
 Local Notation "x -[]-> y" := (connect (grel g) x y)
   (at level 10, format "x  -[]->  y").
