@@ -9,8 +9,8 @@ Follow the instructions on https://github.com/coq-community/templates to regener
 [![Code of Conduct][conduct-shield]][conduct-link]
 [![Zulip][zulip-shield]][zulip-link]
 
-[docker-action-shield]: https://github.com/math-comp/tarjan/workflows/Docker%20CI/badge.svg?branch=master
-[docker-action-link]: https://github.com/math-comp/tarjan/actions?query=workflow:"Docker%20CI"
+[docker-action-shield]: https://github.com/coq-community/tarjan/workflows/Docker%20CI/badge.svg?branch=master
+[docker-action-link]: https://github.com/coq-community/tarjan/actions?query=workflow:"Docker%20CI"
 
 [contributing-shield]: https://img.shields.io/badge/contributions-welcome-%23f7931e.svg
 [contributing-link]: https://github.com/coq-community/manifesto/blob/master/CONTRIBUTING.md
@@ -43,6 +43,7 @@ sorting with extended guarantees for acyclic graphs.
 - Additional dependencies:
   - [MathComp ssreflect 2.0 or later](https://math-comp.github.io)
   - [MathComp fingroup](https://math-comp.github.io)
+  - [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder) 1.4.0 or later
 - Coq namespace: `mathcomp.tarjan`
 - Related publication(s):
   - [Formal Proofs of Tarjan's Strongly Connected Components Algorithm in Why3, Coq and Isabelle](https://hal.inria.fr/hal-01906155) doi:[10.4230/LIPIcs.ITP.2019.13](https://doi.org/10.4230/LIPIcs.ITP.2019.13)
@@ -61,7 +62,7 @@ opam install coq-mathcomp-tarjan
 To instead build and install manually, do:
 
 ``` shell
-git clone https://github.com/math-comp/tarjan.git
+git clone https://github.com/coq-community/tarjan.git
 cd tarjan
 make   # or make -j <number-of-cores-on-your-machine> 
 make install
