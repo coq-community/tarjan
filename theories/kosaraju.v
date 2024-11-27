@@ -738,7 +738,7 @@ have: tsorted r (predT : pred T) [seq i <- tseq (rgraph r) | i \in p.1].
   move=> [tsub tconn tbef] _; split => // x y xtseq.
     by move => xyconn; apply (tconn _ _ xtseq); rewrite -(eq_connect reltoE).
   rewrite (eq_connect reltoE) => conn0; move: (tbef _ _ xtseq conn0).
-  by rewrite /before /= /can_to (eq_find (eq_symconnect reltoE _)).
+  by rewrite /before /= /can_to (eq_find (@eq_symconnect _ _ _ reltoE _)).
 elim: tseq p => [[s l]/= HR HI HE HFI HUF|].
   split=> // i.
   by have := HFI i; rewrite cats0.
