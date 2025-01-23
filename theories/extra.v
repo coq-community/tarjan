@@ -326,8 +326,6 @@ End Relto.
 
 End extra_path.
 
-Arguments eq_symconnect [V r1 r2] _ x y.
-
 Section extra_set.
 Variable (V : finType).
 
