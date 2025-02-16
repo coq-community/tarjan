@@ -44,7 +44,6 @@ opam-file-version: dev
 license:
   fullname: CeCILL-B
   identifier: CECILL-B
-  file: CeCILL-B
 
 supported_coq_versions:
   text: '8.16 or later'
@@ -67,6 +66,8 @@ dependencies:
     [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder) 1.4.0 or later
 
 tested_coq_opam_versions:
+- version: 'rocq-prover-dev'
+  repo: 'mathcomp/mathcomp-dev'
 - version: '2.3.0-coq-8.20'
   repo: 'mathcomp/mathcomp'
 - version: '2.2.0-coq-8.19'
@@ -77,8 +78,6 @@ tested_coq_opam_versions:
   repo: 'mathcomp/mathcomp'
 - version: '2.0.0-coq-8.16'
   repo: 'mathcomp/mathcomp'
-- version: 'coq-dev'
-  repo: 'mathcomp/mathcomp-dev'
 
 namespace: mathcomp.tarjan
 
