@@ -44,7 +44,6 @@ opam-file-version: dev
 license:
   fullname: CeCILL-B
   identifier: CECILL-B
-  file: CeCILL-B
 
 supported_coq_versions:
   text: '8.16 or later'
