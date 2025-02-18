@@ -1,4 +1,4 @@
-From Coq Require Import Setoid.
+From Corelib Require Import Setoid.
 From mathcomp Require Import all_ssreflect.
 Require Import extra.
 
