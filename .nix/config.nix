@@ -31,7 +31,7 @@
 
   ## select an entry to build in the following `bundles` set
   ## defaults to "default"
-  default-bundle = "8.17";
+  default-bundle = "8.20";
 
   ## write one `bundles.name` attribute set per
   ## alternative configuration
@@ -45,11 +45,30 @@
     coq.override.version = "8.17";
     mathcomp.override.version = "2.0.0";
   };
-
+  bundles."8.18".coqPackages = {
+    coq.override.version = "8.17";
+  };
+  bundles."8.19".coqPackages = {
+    coq.override.version = "8.17";
+  };
+  bundles."8.20".coqPackages = {
+    coq.override.version = "8.17";
+  };
+  bundles."9.0".coqPackages = {
+    coq.override.version = "9.0";
+  };
+  bundles."master".rocqPackages = {
+    rocq-core.override.version = "master";
+    stdlib.override.version = "master";
+    rocq-elpi.override.version = "master";
+    rocq-elpi.override.elpi-version = "2.0.7";
+  };
   bundles."master".coqPackages = {
     coq.override.version = "master";
-    coq-elpi.override.version = "coq-master";
-    hierarchy-builder.override.version = "proux01:coq-master";
+    stdlib.override.version = "master";
+    coq-elpi.override.version = "master";
+    coq-elpi.override.elpi-version = "2.0.7";
+    hierarchy-builder.override.version = "master";
     mathcomp.override.version = "master";
   };
 
